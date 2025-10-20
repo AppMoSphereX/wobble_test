@@ -6,7 +6,7 @@ import 'dart:async';
 import '../../../domain/message.dart';
 import '../../../data/repositories/chat_repository.dart';
 import '../../../data/repositories/repositories.dart';
-import '../../../data/services/chat_api_service.dart';
+import '../../../data/services/chat_api_service.dart' show CancellationToken, ChatApiException;
 
 class SupportContext {
   String? product;
@@ -59,12 +59,15 @@ class ChatViewModel extends ChangeNotifier {
   bool _isCancelling = false;
   SupportContext supportContext = SupportContext();
   CancellationToken? _currentCancelToken;
-  // Future? _currentStreamFuture; // Unused for now
+  String? _lastUserMessage; // For retry
+  int _retryCount = 0;
+  static const _maxRetries = 3;
 
   static const _storageKey = 'messages';
   static const _contextKey = 'supportContext';
 
   bool get isCancelling => _isCancelling;
+  bool get canRetry => _retryCount < _maxRetries;
 
   Future<void> _loadMessages() async {
     final prefs = await SharedPreferences.getInstance();
@@ -119,7 +122,7 @@ class ChatViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> sendMessageStream(String text) async {
+  Future<void> sendMessageStream(String text, {bool isRetry = false}) async {
     _isCancelling = false;
     isLoading = true;
     notifyListeners();
@@ -127,9 +130,15 @@ class ChatViewModel extends ChangeNotifier {
     _currentCancelToken?.cancel(); // Cancel previous token if exists
     _currentCancelToken = CancellationToken(); // New token for this run
 
-    // Add user message
-    messages.add(Message(text: text, role: 'user'));
-    notifyListeners();
+    // Store for potential retry
+    if (!isRetry) {
+      _lastUserMessage = text;
+      _retryCount = 0;
+      
+      // Add user message
+      messages.add(Message(text: text, role: 'user'));
+      notifyListeners();
+    }
 
     // Compose prompt for LLM: include support context
     final prompt = _buildPromptWithContext(text);
@@ -161,8 +170,13 @@ class ChatViewModel extends ChangeNotifier {
       }
       final end = DateTime.now();
       final latency = end.difference(start).inMilliseconds;
+      
+      // Success - reset retry count
+      _retryCount = 0;
+      
       // Analyze fullText and slot-fill context
       _updateSupportContext(fullText, userInput: text);
+      
       // Write the last chunk with latency
       messages[assistantIndex] = Message(
         text: fullText,
@@ -173,13 +187,59 @@ class ChatViewModel extends ChangeNotifier {
       await _saveMessages();
       notifyListeners();
     } catch (e) {
-      // Remove the assistant bubble on error (not cancel)
-      if (messages.isNotEmpty && messages.last.role == 'assistant' && _isCancelling == false) {
+      isLoading = false;
+      _retryCount++;
+      
+      // Handle the error and create error message
+      String errorMessage;
+      String errorType;
+      
+      if (e is ChatApiException) {
+        errorMessage = e.message;
+        errorType = e.type;
+      } else {
+        errorMessage = 'An unexpected error occurred';
+        errorType = 'unknown_error';
+      }
+      
+      // Remove empty assistant message if exists
+      if (messages.isNotEmpty && 
+          messages.last.role == 'assistant' && 
+          messages.last.text.isEmpty) {
         messages.removeLast();
       }
-      isLoading = false;
+      
+      // Add error message
+      messages.add(Message(
+        text: 'Failed to get response',
+        role: 'assistant',
+        hasError: true,
+        errorMessage: errorMessage,
+        errorType: errorType,
+      ));
+      
+      await _saveMessages();
       notifyListeners();
     }
+  }
+
+  Future<void> retryLastMessage() async {
+    if (_lastUserMessage == null) return;
+    
+    // Remove the error message
+    if (messages.isNotEmpty && messages.last.hasError) {
+      messages.removeLast();
+      notifyListeners();
+    }
+    
+    // Retry with the last user message
+    await sendMessageStream(_lastUserMessage!, isRetry: true);
+  }
+
+  void clearErrorState() {
+    _retryCount = 0;
+    _lastUserMessage = null;
+    notifyListeners();
   }
 
   // Demo implementation: simple keyword fill and state management

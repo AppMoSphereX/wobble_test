@@ -139,13 +139,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 itemBuilder: (context, index) {
                   final msg = viewModel.messages[index];
                   final isUser = msg.role == 'user';
-                  final bubbleColor = isUser
-                      ? Colors.deepPurple[400]
-                      : Colors.white;
+                  final hasError = msg.hasError;
+                  final bubbleColor = hasError
+                      ? Colors.red[50]
+                      : (isUser ? Colors.deepPurple[400] : Colors.white);
                   final textColor = isUser ? Colors.white : Colors.black87;
                   final align = isUser
                       ? Alignment.centerRight
                       : Alignment.centerLeft;
+                  final isLastMessage = index == viewModel.messages.length - 1;
+                  
                   return Align(
                     alignment: align,
                     child: Padding(
@@ -158,6 +161,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: bubbleColor,
+                          border: hasError
+                              ? Border.all(color: Colors.red[300]!, width: 1.5)
+                              : null,
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(18),
                             topRight: Radius.circular(18),
@@ -166,38 +172,97 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.07),
+                              color: hasError
+                                  ? Colors.red.withOpacity(0.15)
+                                  : Colors.black.withOpacity(0.07),
                               blurRadius: 8,
                               offset: Offset(0, 2),
                             ),
                           ],
                         ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            if (hasError)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline_rounded,
+                                      color: Colors.red[700],
+                                      size: 20,
+                                    ),
+                                    SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        msg.errorMessage ?? 'An error occurred',
+                                        style: TextStyle(
+                                          fontSize: 13.5,
+                                          color: Colors.red[700],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             SelectableText(
                               msg.text,
                               style: TextStyle(
                                 fontSize: 16.5,
-                                color: textColor,
+                                color: hasError ? Colors.red[900] : textColor,
                                 fontFamily: 'RobotoMono',
                               ),
                               textAlign: TextAlign.left,
                             ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _formatTimestamp(msg.timestamp),
-                                  style: TextStyle(fontSize: 11, color: Colors.black38),
-                                ),
-                                if (msg.latency != null && !isUser && msg.text.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 5.0),
-                                    child: Text('⏱ ${msg.latency} ms', style: TextStyle(fontSize: 11.5, color: Colors.black45)),
+                            if (hasError && isLastMessage && viewModel.canRetry)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12.0),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: viewModel.isLoading
+                                        ? null
+                                        : () => viewModel.retryLastMessage(),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red[600],
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 10,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    icon: Icon(Icons.refresh_rounded, size: 20),
+                                    label: Text(
+                                      'Retry',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                   ),
-                              ],
-                            ),
+                                ),
+                              ),
+                            if (!hasError)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _formatTimestamp(msg.timestamp),
+                                    style: TextStyle(fontSize: 11, color: Colors.black38),
+                                  ),
+                                  if (msg.latency != null && !isUser && msg.text.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 5.0),
+                                      child: Text('⏱ ${msg.latency} ms', style: TextStyle(fontSize: 11.5, color: Colors.black45)),
+                                    ),
+                                ],
+                              ),
                           ],
                         ),
                       ),
