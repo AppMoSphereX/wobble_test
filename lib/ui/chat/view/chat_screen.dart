@@ -44,6 +44,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
+  String _formatTimestamp(DateTime dt) {
+    final now = DateTime.now();
+    if (dt.day == now.day && dt.month == now.month && dt.year == now.year) {
+      return "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+    } else {
+      return "${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = ref.watch(chatViewModelProvider);
@@ -175,19 +184,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               ),
                               textAlign: TextAlign.left,
                             ),
-                            if (msg.latency != null &&
-                                !isUser &&
-                                msg.text.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4.0),
-                                child: Text(
-                                  '⏱ ${msg.latency} ms',
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    color: Colors.black45,
-                                  ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _formatTimestamp(msg.timestamp),
+                                  style: TextStyle(fontSize: 11, color: Colors.black38),
                                 ),
-                              ),
+                                if (msg.latency != null && !isUser && msg.text.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 5.0),
+                                    child: Text('⏱ ${msg.latency} ms', style: TextStyle(fontSize: 11.5, color: Colors.black45)),
+                                  ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -250,7 +260,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     Expanded(
                       child: TextField(
                         controller: _controller,
-                        enabled: !viewModel.isLoading,
+                        enabled: !viewModel.isLoading && !viewModel.isCancelling,
                         onSubmitted: (_) {
                           _send(viewModel);
                         },
@@ -268,16 +278,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                       ),
                     ),
+                    if ((viewModel.isLoading && !viewModel.isCancelling))
+                      Padding(
+                        padding: const EdgeInsets.only(right: 2.0),
+                        child: FloatingActionButton(
+                          heroTag: 'stop_btn',
+                          elevation: 0,
+                          mini: true,
+                          backgroundColor: Colors.redAccent,
+                          onPressed: () {
+                            viewModel.stopCurrentChat();
+                            setState(() {});
+                          },
+                          child: Icon(Icons.stop, color: Colors.white, size: 24),
+                        ),
+                      ),
                     FloatingActionButton(
                       elevation: 0,
                       mini: true,
                       backgroundColor:
-                          (_controller.text.trim().isEmpty || viewModel.isLoading)
+                          (_controller.text.trim().isEmpty || viewModel.isLoading || viewModel.isCancelling)
                           ? Colors.grey[300]
                           : Colors.deepPurpleAccent.shade200,
                       foregroundColor: Colors.white,
                       onPressed:
-                          viewModel.isLoading || _controller.text.trim().isEmpty
+                          viewModel.isLoading || viewModel.isCancelling || _controller.text.trim().isEmpty
                           ? null
                           : () {
                               _send(viewModel);
@@ -302,6 +327,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _send(ChatViewModel viewModel) {
+    // If already loading/cancelling, cancel in-progress request before sending
+    if (viewModel.isLoading || viewModel.isCancelling) {
+      viewModel.stopCurrentChat();
+    }
     final text = _controller.text.trim();
     if (text.isNotEmpty) {
       viewModel.sendMessageStream(text);

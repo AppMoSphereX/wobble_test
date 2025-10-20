@@ -2,6 +2,12 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+class CancellationToken {
+  bool _cancelled = false;
+  void cancel() => _cancelled = true;
+  bool get isCancelled => _cancelled;
+}
+
 class ChatApiService {
   final _baseUrl = 'http://localhost:11434/api/generate';
 
@@ -17,6 +23,8 @@ class ChatApiService {
     );
     final end = DateTime.now();
     final latency = end.difference(start).inMilliseconds;
+
+    debugPrint(response.body); // Still print for debug
 
     // Combine all 'response' fields from each JSON line
     final lines = response.body.split('\n');
@@ -38,7 +46,7 @@ class ChatApiService {
     };
   }
 
-  Stream<String> sendPromptStream(String prompt) async* {
+  Stream<String> sendPromptStream(String prompt, {CancellationToken? cancelToken}) async* {
     final request = http.Request('POST', Uri.parse(_baseUrl))
       ..headers['Content-Type'] = 'application/json'
       ..body = jsonEncode({'model': 'gemma3:4b', 'prompt': prompt});
@@ -46,8 +54,10 @@ class ChatApiService {
     final utf8Stream = response.stream.transform(utf8.decoder);
 
     await for (final chunk in utf8Stream) {
+      if (cancelToken?.isCancelled ?? false) break;
       final lines = chunk.split('\n');
       for (final line in lines) {
+        if (cancelToken?.isCancelled ?? false) break;
         if (line.trim().isEmpty) continue;
         try {
           final jsonObj = jsonDecode(line);
@@ -59,6 +69,7 @@ class ChatApiService {
           // Ignore lines that aren't valid JSON
         }
       }
+      if (cancelToken?.isCancelled ?? false) break;
     }
   }
 }

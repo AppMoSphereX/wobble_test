@@ -11,7 +11,7 @@ class ChatRepository {
     return (reply, latency);
   }
 
-  Stream<String> sendMessageStream(String text) {
-    return _api.sendPromptStream(text);
+  Stream<String> sendMessageStream(String text, {CancellationToken? cancelToken}) {
+    return _api.sendPromptStream(text, cancelToken: cancelToken);
   }
 }
