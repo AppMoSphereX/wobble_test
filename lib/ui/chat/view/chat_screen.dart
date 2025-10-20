@@ -59,20 +59,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7FC),
+      drawer: _buildSessionDrawer(context, viewModel),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
         centerTitle: false,
         titleSpacing: 0,
         leadingWidth: 68,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: CircleAvatar(
-            backgroundColor: Colors.deepPurple.shade100,
-            child: Text('🤖', style: TextStyle(fontSize: 24)),
+        leading: Builder(
+          builder: (context) => Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: GestureDetector(
+              onTap: () => Scaffold.of(context).openDrawer(),
+              child: CircleAvatar(
+                backgroundColor: Colors.deepPurple.shade100,
+                child: Text('🤖', style: TextStyle(fontSize: 24)),
+              ),
+            ),
           ),
         ),
-        title: Row(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Wobble Chat',
@@ -82,23 +89,45 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 fontSize: 21,
               ),
             ),
+            if (viewModel.currentSession != null)
+              Text(
+                viewModel.currentSession!.displayTitle,
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 12,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
           ],
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              Icons.add_circle_outline_rounded,
+              color: Colors.deepPurple,
+              size: 26,
+            ),
+            tooltip: 'New Chat',
+            onPressed: () async {
+              await viewModel.createNewSession();
+              _scrollController.jumpTo(0);
+              setState(() {});
+            },
+          ),
           IconButton(
             icon: Icon(
               Icons.refresh_rounded,
               color: Colors.deepPurple,
               size: 26,
             ),
-            tooltip: 'Start Over',
+            tooltip: 'Clear Current Chat',
             onPressed: () async {
               final yes = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: Text('Start Over?'),
+                  title: Text('Clear This Chat?'),
                   content: Text(
-                    'This will remove all chat history from device. Continue?',
+                    'This will remove all messages from this chat session. Continue?',
                   ),
                   actions: [
                     TextButton(
@@ -110,14 +139,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         backgroundColor: Colors.redAccent,
                         foregroundColor: Colors.white,
                       ),
-                      child: Text('Start Over'),
+                      child: Text('Clear'),
                       onPressed: () => Navigator.pop(context, true),
                     ),
                   ],
                 ),
               );
               if (yes == true) {
-                await ref.read(chatViewModelProvider).clearMessages();
+                await viewModel.clearCurrentSession();
                 _scrollController.jumpTo(0);
                 setState(() {});
               }
@@ -401,6 +430,252 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       viewModel.sendMessageStream(text);
       _controller.clear();
     }
+  }
+
+  Widget _buildSessionDrawer(BuildContext context, ChatViewModel viewModel) {
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: EdgeInsets.all(20),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.deepPurple[50],
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey[300]!, width: 1),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.chat_bubble_outline, color: Colors.deepPurple, size: 28),
+                      SizedBox(width: 12),
+                      Text(
+                        'Chat Sessions',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '${viewModel.sessions.length} ${viewModel.sessions.length == 1 ? 'session' : 'sessions'}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // New Chat Button
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await viewModel.createNewSession();
+                    _scrollController.jumpTo(0);
+                    setState(() {});
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: Icon(Icons.add_rounded, size: 22),
+                  label: Text(
+                    'New Chat',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ),
+            
+            Divider(height: 1),
+            
+            // Session List
+            Expanded(
+              child: viewModel.sessions.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No sessions yet',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      itemCount: viewModel.sessions.length,
+                      itemBuilder: (context, index) {
+                        final session = viewModel.sessions[index];
+                        final isCurrentSession = session.sessionId == viewModel.currentSession?.sessionId;
+                        final messageCount = session.messages.length;
+                        
+                        return Dismissible(
+                          key: Key(session.sessionId),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: EdgeInsets.only(right: 20),
+                            color: Colors.red,
+                            child: Icon(Icons.delete, color: Colors.white),
+                          ),
+                          confirmDismiss: (direction) async {
+                            if (viewModel.sessions.length == 1) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Cannot delete the last session'),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                              return false;
+                            }
+                            return await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text('Delete Session?'),
+                                content: Text('This will permanently delete this chat session.'),
+                                actions: [
+                                  TextButton(
+                                    child: Text('Cancel'),
+                                    onPressed: () => Navigator.pop(context, false),
+                                  ),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: Text('Delete'),
+                                    onPressed: () => Navigator.pop(context, true),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          onDismissed: (direction) async {
+                            await viewModel.deleteSession(session.sessionId);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Session "${session.displayTitle}" deleted'),
+                                  backgroundColor: Colors.deepPurple,
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                          child: ListTile(
+                            selected: isCurrentSession,
+                            selectedTileColor: Colors.deepPurple[50],
+                            leading: CircleAvatar(
+                              backgroundColor: isCurrentSession
+                                  ? Colors.deepPurple
+                                  : Colors.grey[300],
+                              child: Icon(
+                                Icons.chat_bubble,
+                                color: isCurrentSession ? Colors.white : Colors.grey[600],
+                                size: 20,
+                              ),
+                            ),
+                            title: Text(
+                              session.displayTitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: isCurrentSession ? FontWeight.w600 : FontWeight.normal,
+                                color: isCurrentSession ? Colors.deepPurple[700] : Colors.black87,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '$messageCount ${messageCount == 1 ? 'message' : 'messages'} • ${_formatRelativeTime(session.lastUpdatedAt)}',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isCurrentSession)
+                                  Icon(Icons.check_circle, color: Colors.deepPurple, size: 20),
+                                if (!isCurrentSession)
+                                  Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+                                SizedBox(width: 4),
+                                IconButton(
+                                  icon: Icon(Icons.delete_outline, color: Colors.red[400], size: 20),
+                                  tooltip: 'Delete session',
+                                  onPressed: viewModel.sessions.length == 1
+                                      ? null
+                                      : () async {
+                                          final confirmed = await showDialog<bool>(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: Text('Delete Session?'),
+                                              content: Text(
+                                                'This will permanently delete "${session.displayTitle}".',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  child: Text('Cancel'),
+                                                  onPressed: () => Navigator.pop(context, false),
+                                                ),
+                                                ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.red,
+                                                    foregroundColor: Colors.white,
+                                                  ),
+                                                  child: Text('Delete'),
+                                                  onPressed: () => Navigator.pop(context, true),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (confirmed == true) {
+                                            await viewModel.deleteSession(session.sessionId);
+                                          }
+                                        },
+                                ),
+                              ],
+                            ),
+                            onTap: () async {
+                              Navigator.pop(context);
+                              if (!isCurrentSession) {
+                                await viewModel.switchToSession(session.sessionId);
+                                _scrollController.jumpTo(0);
+                                setState(() {});
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatRelativeTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    
+    return '${dt.day}/${dt.month}/${dt.year}';
   }
 }
 

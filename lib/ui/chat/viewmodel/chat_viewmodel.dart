@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import 'dart:convert';
 import 'dart:async';
 import '../../../domain/message.dart';
+import '../../../domain/chat_session.dart';
 import '../../../data/repositories/chat_repository.dart';
 import '../../../data/repositories/repositories.dart';
 import '../../../data/services/chat_api_service.dart' show CancellationToken, ChatApiException;
@@ -50,11 +52,17 @@ class SupportContext {
 
 class ChatViewModel extends ChangeNotifier {
   final ChatRepository _repo;
+  final _uuid = const Uuid();
+  
   ChatViewModel(this._repo) {
-    _loadMessages();
+    _loadSessions();
   }
 
-  List<Message> messages = [];
+  // Session management
+  List<ChatSession> _sessions = [];
+  String? _currentSessionId;
+  
+  // Current session state
   bool isLoading = false;
   bool _isCancelling = false;
   SupportContext supportContext = SupportContext();
@@ -63,53 +71,180 @@ class ChatViewModel extends ChangeNotifier {
   int _retryCount = 0;
   static const _maxRetries = 3;
 
-  static const _storageKey = 'messages';
-  static const _contextKey = 'supportContext';
+  static const _sessionsKey = 'chat_sessions';
+  static const _currentSessionKey = 'current_session_id';
+  static const _contextKeyPrefix = 'support_context_';
 
   bool get isCancelling => _isCancelling;
   bool get canRetry => _retryCount < _maxRetries;
+  
+  List<ChatSession> get sessions => _sessions;
+  ChatSession? get currentSession {
+    if (_currentSessionId == null) return null;
+    try {
+      return _sessions.firstWhere((s) => s.sessionId == _currentSessionId);
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  List<Message> get messages => currentSession?.messages ?? [];
 
-  Future<void> _loadMessages() async {
+  Future<void> _loadSessions() async {
     final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString(_storageKey);
-    final ctxJson = prefs.getString(_contextKey);
-    if (data != null) {
-      final List decoded = jsonDecode(data);
-      messages = decoded.map((m) => Message.fromJson(m)).toList().cast<Message>();
+    
+    // Load all sessions
+    final sessionsJson = prefs.getString(_sessionsKey);
+    if (sessionsJson != null) {
+      final List decoded = jsonDecode(sessionsJson);
+      _sessions = decoded
+          .map((s) => ChatSession.fromJson(s as Map<String, dynamic>))
+          .toList();
+    }
+    
+    // Load current session ID
+    _currentSessionId = prefs.getString(_currentSessionKey);
+    
+    // Load support context for current session
+    if (_currentSessionId != null) {
+      final ctxJson = prefs.getString('$_contextKeyPrefix$_currentSessionId');
+      if (ctxJson != null) {
+        supportContext = SupportContext.fromJson(jsonDecode(ctxJson));
+      }
+    }
+    
+    // Create first session if no sessions exist
+    if (_sessions.isEmpty) {
+      await createNewSession();
+    } else {
+      // If no current session set, use the most recent
+      if (_currentSessionId == null || currentSession == null) {
+        _currentSessionId = _sessions.first.sessionId;
+      }
       notifyListeners();
-    }
-    if (ctxJson != null) {
-      supportContext = SupportContext.fromJson(jsonDecode(ctxJson));
-    }
-    // Greet if empty
-    if (messages.isEmpty) {
-      await greet();
+      
+      // Greet if current session is empty
+      if (currentSession?.messages.isEmpty ?? true) {
+        await greet();
+      }
     }
   }
 
-  Future<void> _saveMessages() async {
+  Future<void> _saveSessions() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_storageKey, jsonEncode(messages.map((m) => m.toJson()).toList()));
-    await prefs.setString(_contextKey, jsonEncode(supportContext.toJson()));
+    
+    // Save all sessions
+    final sessionsJson = jsonEncode(_sessions.map((s) => s.toJson()).toList());
+    await prefs.setString(_sessionsKey, sessionsJson);
+    
+    // Save current session ID
+    if (_currentSessionId != null) {
+      await prefs.setString(_currentSessionKey, _currentSessionId!);
+      
+      // Save support context for current session
+      await prefs.setString(
+        '$_contextKeyPrefix$_currentSessionId',
+        jsonEncode(supportContext.toJson()),
+      );
+    }
   }
 
-  Future<void> clearMessages() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_storageKey);
-    await prefs.remove(_contextKey);
-    messages = [];
+  Future<void> createNewSession() async {
+    final sessionId = _uuid.v4();
+    final newSession = ChatSession.create(sessionId);
+    
+    _sessions.insert(0, newSession); // Add to beginning (most recent)
+    _currentSessionId = sessionId;
     supportContext.reset();
+    
+    await _saveSessions();
     notifyListeners();
     await greet();
   }
 
-  Future<void> greet() async {
-    messages.add(Message(
-      text: "Hi! I’m your support assistant. What product can I help you with today?",
-      role: 'assistant',
-    ));
-    await _saveMessages();
+  Future<void> switchToSession(String sessionId) async {
+    if (_currentSessionId == sessionId) return;
+    
+    _currentSessionId = sessionId;
+    
+    // Load support context for this session
+    final prefs = await SharedPreferences.getInstance();
+    final ctxJson = prefs.getString('$_contextKeyPrefix$sessionId');
+    if (ctxJson != null) {
+      supportContext = SupportContext.fromJson(jsonDecode(ctxJson));
+    } else {
+      supportContext.reset();
+    }
+    
+    await prefs.setString(_currentSessionKey, sessionId);
     notifyListeners();
+  }
+
+  Future<void> deleteSession(String sessionId) async {
+    _sessions.removeWhere((s) => s.sessionId == sessionId);
+    
+    // If we deleted the current session, switch to another
+    if (_currentSessionId == sessionId) {
+      if (_sessions.isNotEmpty) {
+        await switchToSession(_sessions.first.sessionId);
+      } else {
+        await createNewSession();
+      }
+    }
+    
+    // Clean up context for deleted session
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('$_contextKeyPrefix$sessionId');
+    
+    await _saveSessions();
+    notifyListeners();
+  }
+
+  Future<void> clearCurrentSession() async {
+    if (_currentSessionId == null) return;
+    
+    final sessionIndex = _sessions.indexWhere((s) => s.sessionId == _currentSessionId);
+    if (sessionIndex != -1) {
+      final clearedSession = _sessions[sessionIndex].copyWith(
+        messages: [],
+        lastUpdatedAt: DateTime.now(),
+      );
+      _sessions[sessionIndex] = clearedSession;
+      supportContext.reset();
+      
+      await _saveSessions();
+      notifyListeners();
+      await greet();
+    }
+  }
+
+  Future<void> greet() async {
+    if (_currentSessionId == null) return;
+    
+    _updateCurrentSessionMessages((messages) {
+      messages.add(Message(
+        text: "Hi! I'm your support assistant. What product can I help you with today?",
+        role: 'assistant',
+      ));
+    });
+    
+    await _saveSessions();
+    notifyListeners();
+  }
+
+  void _updateCurrentSessionMessages(void Function(List<Message>) updater) {
+    if (_currentSessionId == null) return;
+    
+    final sessionIndex = _sessions.indexWhere((s) => s.sessionId == _currentSessionId);
+    if (sessionIndex != -1) {
+      final currentMessages = List<Message>.from(_sessions[sessionIndex].messages);
+      updater(currentMessages);
+      
+      _sessions[sessionIndex] = _sessions[sessionIndex].copyWith(
+        messages: currentMessages,
+        lastUpdatedAt: DateTime.now(),
+      );
+    }
   }
 
   void stopCurrentChat() {
@@ -123,6 +258,8 @@ class ChatViewModel extends ChangeNotifier {
   }
 
   Future<void> sendMessageStream(String text, {bool isRetry = false}) async {
+    if (_currentSessionId == null) return;
+    
     _isCancelling = false;
     isLoading = true;
     notifyListeners();
@@ -136,7 +273,9 @@ class ChatViewModel extends ChangeNotifier {
       _retryCount = 0;
       
       // Add user message
-      messages.add(Message(text: text, role: 'user'));
+      _updateCurrentSessionMessages((messages) {
+        messages.add(Message(text: text, role: 'user'));
+      });
       notifyListeners();
     }
 
@@ -144,9 +283,13 @@ class ChatViewModel extends ChangeNotifier {
     final prompt = _buildPromptWithContext(text);
 
     // Add partial assistant message
-    messages.add(Message(text: '', role: 'assistant'));
+    _updateCurrentSessionMessages((messages) {
+      messages.add(Message(text: '', role: 'assistant'));
+    });
     notifyListeners();
-    int assistantIndex = messages.length - 1;
+    
+    final currentMessages = messages;
+    int assistantIndex = currentMessages.length - 1;
     String fullText = '';
 
     final stream = _repo.sendMessageStream(prompt, cancelToken: _currentCancelToken);
@@ -157,15 +300,20 @@ class ChatViewModel extends ChangeNotifier {
       await for (final chunk in stream) {
         if (_isCancelling || (_currentCancelToken?.isCancelled ?? false)) {
           isLoading = false;
-          await _saveMessages();
+          await _saveSessions();
           notifyListeners();
           return; // cut off streaming instantly and keep partial response
         }
         fullText += chunk;
-        messages[assistantIndex] = Message(
-          text: fullText,
-          role: 'assistant',
-        );
+        
+        _updateCurrentSessionMessages((messages) {
+          if (assistantIndex < messages.length) {
+            messages[assistantIndex] = Message(
+              text: fullText,
+              role: 'assistant',
+            );
+          }
+        });
         notifyListeners();
       }
       final end = DateTime.now();
@@ -178,13 +326,18 @@ class ChatViewModel extends ChangeNotifier {
       _updateSupportContext(fullText, userInput: text);
       
       // Write the last chunk with latency
-      messages[assistantIndex] = Message(
-        text: fullText,
-        role: 'assistant',
-        latency: latency,
-      );
+      _updateCurrentSessionMessages((messages) {
+        if (assistantIndex < messages.length) {
+          messages[assistantIndex] = Message(
+            text: fullText,
+            role: 'assistant',
+            latency: latency,
+          );
+        }
+      });
+      
       isLoading = false;
-      await _saveMessages();
+      await _saveSessions();
       notifyListeners();
     } catch (e) {
       isLoading = false;
@@ -203,22 +356,24 @@ class ChatViewModel extends ChangeNotifier {
       }
       
       // Remove empty assistant message if exists
-      if (messages.isNotEmpty && 
-          messages.last.role == 'assistant' && 
-          messages.last.text.isEmpty) {
-        messages.removeLast();
-      }
+      _updateCurrentSessionMessages((messages) {
+        if (messages.isNotEmpty && 
+            messages.last.role == 'assistant' && 
+            messages.last.text.isEmpty) {
+          messages.removeLast();
+        }
+        
+        // Add error message
+        messages.add(Message(
+          text: 'Failed to get response',
+          role: 'assistant',
+          hasError: true,
+          errorMessage: errorMessage,
+          errorType: errorType,
+        ));
+      });
       
-      // Add error message
-      messages.add(Message(
-        text: 'Failed to get response',
-        role: 'assistant',
-        hasError: true,
-        errorMessage: errorMessage,
-        errorType: errorType,
-      ));
-      
-      await _saveMessages();
+      await _saveSessions();
       notifyListeners();
     }
   }
@@ -227,10 +382,12 @@ class ChatViewModel extends ChangeNotifier {
     if (_lastUserMessage == null) return;
     
     // Remove the error message
-    if (messages.isNotEmpty && messages.last.hasError) {
-      messages.removeLast();
-      notifyListeners();
-    }
+    _updateCurrentSessionMessages((messages) {
+      if (messages.isNotEmpty && messages.last.hasError) {
+        messages.removeLast();
+      }
+    });
+    notifyListeners();
     
     // Retry with the last user message
     await sendMessageStream(_lastUserMessage!, isRetry: true);
