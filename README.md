@@ -230,3 +230,80 @@ onPressed: () {
 * ✅ gemma3:4b via `http://localhost:11434/api/generate`
 * ✅ Latency handled locally
 
+---
+
+## 🔄 Trade-offs
+
+### What Was Cut to Meet Time Constraints
+
+#### 1. **Backend HTTP API Layer**
+- **Missing:** Dedicated backend server that brokers LLM requests
+- **Current:** Direct local Ollama calls from Flutter app
+- **Impact:** No provider key security, no request validation, no rate limiting
+- **Why Cut:** Local development focus, 2-hour time constraint
+- **Next Steps:** Add Express.js/Node.js backend with proper API endpoints
+
+#### 2. **Comprehensive Error Handling & Retry UI**
+- **Missing:** Error state indicators, retry buttons, auto-retry logic
+- **Current:** Basic error handling, no user-facing retry mechanism
+- **Impact:** Poor UX when requests fail, no recovery options
+- **Why Cut:** Focus on core chat functionality first
+- **Next Steps:** Add error states, retry buttons, exponential backoff
+
+#### 3. **Session Management System**
+- **Missing:** `sessionId` generation, session-based conversation tracking
+- **Current:** Simple message persistence without session concept
+- **Impact:** No conversation isolation, no session-based features
+- **Why Cut:** MVP focus on basic chat functionality
+- **Next Steps:** Add session UUIDs, session-based persistence
+
+#### 4. **Structured Support Ticket Flow**
+- **Missing:** Robust field collection, confirmation steps, ticket ID generation
+- **Current:** Basic context tracking with simple heuristics
+- **Impact:** Limited ticket creation workflow, no structured data extraction
+- **Why Cut:** Complex LLM prompt engineering and state management
+- **Next Steps:** Implement proper field extraction, confirmation UI, ticket generation
+
+#### 5. **Accessibility & Dark Mode**
+- **Missing:** Dark mode support, comprehensive accessibility labels
+- **Current:** Basic accessibility, light mode only
+- **Impact:** Limited accessibility, no theme support
+- **Why Cut:** UI polish deprioritized for core functionality
+- **Next Steps:** Add theme switching, comprehensive accessibility
+
+#### 6. **Input Validation & Security**
+- **Missing:** Prompt length limits, input sanitization, request timeouts
+- **Current:** No validation layer, basic error handling
+- **Impact:** Potential security issues, no input constraints
+- **Why Cut:** Local development environment, time constraints
+- **Next Steps:** Add input validation, sanitization, security headers
+
+#### 7. **Performance Optimizations**
+- **Missing:** Advanced cancellation logic, request queuing, performance monitoring
+- **Current:** Basic cancellation, streaming support
+- **Impact:** Suboptimal performance under load, limited monitoring
+- **Why Cut:** Focus on core functionality over optimization
+- **Next Steps:** Add request queuing, performance metrics, advanced cancellation
+
+### What Would Be Improved Next If we had enough time
+
+1. **Backend API Layer** - Add Node.js server with proper endpoints
+2. **Error Recovery** - Comprehensive retry logic and error states
+3. **Session Management** - UUID-based session tracking
+4. **Structured Tickets** - Proper field extraction and confirmation flow
+5. **Accessibility** - Dark mode and comprehensive a11y support
+6. **Security** - Input validation and sanitization
+7. **Performance** - Request optimization and monitoring
+8. **Testing** - Unit and integration tests for all layers
+9. **Documentation** - API documentation and deployment guides
+10. **Monitoring** - Logging, metrics, and error tracking
+
+### Architecture Decisions Made
+
+- **Local Ollama:** Chosen for simplicity and no API key management
+- **MVVM + Riverpod:** Clean separation of concerns with reactive state management
+- **Streaming Responses:** Real-time token display for better UX
+- **Persistent Storage:** SharedPreferences for simple local persistence
+- **Cancellation Support:** User can stop LLM responses mid-stream
+- **Context-Aware Chat:** Basic support ticket flow with context tracking
+
