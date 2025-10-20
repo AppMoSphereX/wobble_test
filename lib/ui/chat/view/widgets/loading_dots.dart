@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class LoadingDots extends StatefulWidget {
   const LoadingDots({super.key});
-  
+
   @override
   State<LoadingDots> createState() => _LoadingDotsState();
 }
@@ -10,7 +10,7 @@ class LoadingDots extends StatefulWidget {
 class _LoadingDotsState extends State<LoadingDots>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  
+
   @override
   void initState() {
     super.initState();
@@ -42,4 +42,3 @@ class _LoadingDotsState extends State<LoadingDots>
     );
   }
 }
-

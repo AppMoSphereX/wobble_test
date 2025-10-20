@@ -58,9 +58,7 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: InputBorder.none,
@@ -109,9 +107,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 2,
         color: _darkSurfaceVariant,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: InputBorder.none,
@@ -125,12 +121,8 @@ class AppTheme {
         backgroundColor: _darkSurface,
       ),
       dividerColor: Colors.grey[800],
-      drawerTheme: const DrawerThemeData(
-        backgroundColor: _darkSurface,
-      ),
-      dialogTheme: const DialogThemeData(
-        backgroundColor: _darkSurfaceVariant,
-      ),
+      drawerTheme: const DrawerThemeData(backgroundColor: _darkSurface),
+      dialogTheme: const DialogThemeData(backgroundColor: _darkSurfaceVariant),
       // Ensure minimum touch targets
       materialTapTargetSize: MaterialTapTargetSize.padded,
     );
@@ -191,7 +183,9 @@ extension AppThemeExtension on ThemeData {
   Color get ticketOpenBackground {
     return brightness == Brightness.light
         ? const Color(0xFFE3F2FD) // Light blue
-        : const Color(0xFF1565C0).withValues(alpha: 0.3); // Dark blue with opacity
+        : const Color(
+            0xFF1565C0,
+          ).withValues(alpha: 0.3); // Dark blue with opacity
   }
 
   Color get ticketOpenText {
@@ -203,7 +197,9 @@ extension AppThemeExtension on ThemeData {
   Color get ticketResolvedBackground {
     return brightness == Brightness.light
         ? const Color(0xFFE8F5E9) // Light green
-        : const Color(0xFF2E7D32).withValues(alpha: 0.3); // Dark green with opacity
+        : const Color(
+            0xFF2E7D32,
+          ).withValues(alpha: 0.3); // Dark green with opacity
   }
 
   Color get ticketResolvedText {
@@ -222,4 +218,3 @@ extension AppThemeExtension on ThemeData {
     return colorScheme.onSurface.withValues(alpha: 0.7);
   }
 }
-

@@ -8,7 +8,7 @@ import '../../theme/app_theme.dart';
 
 class TicketsScreen extends ConsumerWidget {
   final VoidCallback? onViewConversation;
-  
+
   const TicketsScreen({super.key, this.onViewConversation});
 
   @override
@@ -58,7 +58,11 @@ class TicketsScreen extends ConsumerWidget {
     );
   }
 
-  void _showTicketDetails(BuildContext context, ticket, TicketsViewModel viewModel) {
+  void _showTicketDetails(
+    BuildContext context,
+    ticket,
+    TicketsViewModel viewModel,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -71,4 +75,3 @@ class TicketsScreen extends ConsumerWidget {
     );
   }
 }
-

@@ -6,11 +6,7 @@ class TicketCard extends StatelessWidget {
   final Ticket ticket;
   final VoidCallback onTap;
 
-  const TicketCard({
-    super.key,
-    required this.ticket,
-    required this.onTap,
-  });
+  const TicketCard({super.key, required this.ticket, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -26,8 +22,8 @@ class TicketCard extends StatelessWidget {
           color: isOpen
               ? theme.colorScheme.primary.withValues(alpha: 0.4)
               : isResolved
-                  ? Colors.green.withValues(alpha: 0.4)
-                  : theme.colorScheme.outline.withValues(alpha: 0.4),
+              ? Colors.green.withValues(alpha: 0.4)
+              : theme.colorScheme.outline.withValues(alpha: 0.4),
           width: 1.5,
         ),
       ),
@@ -63,7 +59,9 @@ class TicketCard extends StatelessWidget {
                           _formatDate(ticket.createdAt),
                           style: TextStyle(
                             fontSize: 12,
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
                           ),
                         ),
                       ],
@@ -73,13 +71,15 @@ class TicketCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Product
               Row(
                 children: [
-                  Icon(Icons.inventory_2_outlined, 
-                    size: 16, 
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    size: 16,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -96,21 +96,25 @@ class TicketCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              
+
               // Issue
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.warning_amber_outlined, 
-                    size: 16, 
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                  Icon(
+                    Icons.warning_amber_outlined,
+                    size: 16,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       ticket.issue,
                       style: TextStyle(
                         fontSize: 13,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.7,
+                        ),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -119,7 +123,7 @@ class TicketCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              
+
               // Urgency
               Row(
                 children: [
@@ -171,4 +175,3 @@ class TicketCard extends StatelessWidget {
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 }
-

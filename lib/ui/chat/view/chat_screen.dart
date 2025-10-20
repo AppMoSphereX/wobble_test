@@ -48,7 +48,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
   }
 
-
   @override
   Widget build(BuildContext context) {
     final viewModel = ref.watch(chatViewModelProvider);
@@ -169,10 +168,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 itemBuilder: (context, index) {
                   final msg = viewModel.messages[index];
                   final isLastMessage = index == viewModel.messages.length - 1;
-                  
+
                   return MessageBubble(
                     message: msg,
-                    showRetry: isLastMessage && viewModel.canRetry && !viewModel.isLoading,
+                    showRetry:
+                        isLastMessage &&
+                        viewModel.canRetry &&
+                        !viewModel.isLoading,
                     onRetry: () => viewModel.retryLastMessage(),
                   );
                 },
@@ -215,7 +217,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 top: 7,
               ),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: theme.inputBackgroundColor,
                   borderRadius: BorderRadius.circular(22),
@@ -235,13 +240,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         textField: true,
                         child: TextField(
                           controller: _controller,
-                          enabled: !viewModel.isLoading && !viewModel.isCancelling,
+                          enabled:
+                              !viewModel.isLoading && !viewModel.isCancelling,
                           onSubmitted: (_) {
                             _send(viewModel);
                           },
                           minLines: 1,
                           maxLines: 5,
-                          style: TextStyle(fontSize: 16.7, color: theme.colorScheme.onSurface),
+                          style: TextStyle(
+                            fontSize: 16.7,
+                            color: theme.colorScheme.onSurface,
+                          ),
                           decoration: InputDecoration(
                             border: InputBorder.none,
                             hintText: 'Type your message...',
@@ -270,27 +279,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               viewModel.stopCurrentChat();
                               setState(() {});
                             },
-                            child: const Icon(Icons.stop, color: Colors.white, size: 24),
+                            child: const Icon(
+                              Icons.stop,
+                              color: Colors.white,
+                              size: 24,
+                            ),
                           ),
                         ),
                       ),
                     Semantics(
-                      label: _controller.text.trim().isEmpty 
+                      label: _controller.text.trim().isEmpty
                           ? 'Send button disabled, enter a message first'
                           : 'Send message',
                       button: true,
-                      enabled: !viewModel.isLoading && !viewModel.isCancelling && _controller.text.trim().isNotEmpty,
+                      enabled:
+                          !viewModel.isLoading &&
+                          !viewModel.isCancelling &&
+                          _controller.text.trim().isNotEmpty,
                       child: FloatingActionButton(
                         elevation: 0,
                         mini: true,
                         backgroundColor:
-                            (_controller.text.trim().isEmpty || viewModel.isLoading || viewModel.isCancelling)
+                            (_controller.text.trim().isEmpty ||
+                                viewModel.isLoading ||
+                                viewModel.isCancelling)
                             ? theme.disabledColor
                             : theme.colorScheme.primary,
                         foregroundColor: Colors.white,
                         tooltip: 'Send message',
                         onPressed:
-                            viewModel.isLoading || viewModel.isCancelling || _controller.text.trim().isEmpty
+                            viewModel.isLoading ||
+                                viewModel.isCancelling ||
+                                _controller.text.trim().isEmpty
                             ? null
                             : () {
                                 _send(viewModel);
@@ -348,7 +368,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.chat_bubble_outline, color: theme.colorScheme.primary, size: 28),
+                      Icon(
+                        Icons.chat_bubble_outline,
+                        color: theme.colorScheme.primary,
+                        size: 28,
+                      ),
                       const SizedBox(width: 12),
                       Text(
                         'Chat Sessions',
@@ -371,7 +395,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ],
               ),
             ),
-            
+
             // New Chat Button
             Padding(
               padding: const EdgeInsets.all(12.0),
@@ -391,7 +415,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    minimumSize: const Size(double.infinity, 48), // Ensure minimum tap target
+                    minimumSize: const Size(
+                      double.infinity,
+                      48,
+                    ), // Ensure minimum tap target
                   ),
                   icon: const Icon(Icons.add_rounded, size: 22),
                   label: const Text(
@@ -401,14 +428,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
               ),
             ),
-            
+
             const Divider(height: 1),
-            
+
             // Theme Settings
             _buildThemeSettings(context, ref),
-            
+
             const Divider(height: 1),
-            
+
             // Session List
             Expanded(
               child: viewModel.sessions.isEmpty
@@ -423,9 +450,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       itemCount: viewModel.sessions.length,
                       itemBuilder: (context, index) {
                         final session = viewModel.sessions[index];
-                        final isCurrentSession = session.sessionId == viewModel.currentSession?.sessionId;
+                        final isCurrentSession =
+                            session.sessionId ==
+                            viewModel.currentSession?.sessionId;
                         final messageCount = session.messages.length;
-                        
+
                         return Dismissible(
                           key: Key(session.sessionId),
                           direction: DismissDirection.endToStart,
@@ -433,13 +462,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             alignment: Alignment.centerRight,
                             padding: const EdgeInsets.only(right: 20),
                             color: theme.colorScheme.error,
-                            child: const Icon(Icons.delete, color: Colors.white),
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                            ),
                           ),
                           confirmDismiss: (direction) async {
                             if (viewModel.sessions.length == 1) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Cannot delete the last session'),
+                                  content: Text(
+                                    'Cannot delete the last session',
+                                  ),
                                   backgroundColor: Colors.orange,
                                 ),
                               );
@@ -449,11 +483,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               context: context,
                               builder: (context) => AlertDialog(
                                 title: Text('Delete Session?'),
-                                content: Text('This will permanently delete this chat session.'),
+                                content: Text(
+                                  'This will permanently delete this chat session.',
+                                ),
                                 actions: [
                                   TextButton(
                                     child: Text('Cancel'),
-                                    onPressed: () => Navigator.pop(context, false),
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
                                   ),
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(
@@ -461,7 +498,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       foregroundColor: Colors.white,
                                     ),
                                     child: Text('Delete'),
-                                    onPressed: () => Navigator.pop(context, true),
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
                                   ),
                                 ],
                               ),
@@ -472,7 +510,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Session "${session.displayTitle}" deleted'),
+                                  content: Text(
+                                    'Session "${session.displayTitle}" deleted',
+                                  ),
                                   backgroundColor: Colors.deepPurple,
                                   duration: Duration(seconds: 2),
                                 ),
@@ -488,8 +528,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   : theme.colorScheme.surfaceContainerHighest,
                               child: Icon(
                                 Icons.chat_bubble,
-                                color: isCurrentSession 
-                                    ? theme.colorScheme.onPrimary 
+                                color: isCurrentSession
+                                    ? theme.colorScheme.onPrimary
                                     : theme.colorScheme.onSurfaceVariant,
                                 size: 20,
                               ),
@@ -499,9 +539,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontWeight: isCurrentSession ? FontWeight.w600 : FontWeight.normal,
-                                color: isCurrentSession 
-                                    ? theme.colorScheme.primary 
+                                fontWeight: isCurrentSession
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                                color: isCurrentSession
+                                    ? theme.colorScheme.primary
                                     : theme.colorScheme.onSurface,
                               ),
                             ),
@@ -513,12 +555,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (isCurrentSession)
-                                  Icon(Icons.check_circle, color: theme.colorScheme.primary, size: 20),
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: theme.colorScheme.primary,
+                                    size: 20,
+                                  ),
                                 if (!isCurrentSession)
-                                  Icon(Icons.chevron_right, color: theme.hintColor, size: 20),
+                                  Icon(
+                                    Icons.chevron_right,
+                                    color: theme.hintColor,
+                                    size: 20,
+                                  ),
                                 const SizedBox(width: 4),
                                 IconButton(
-                                  icon: Icon(Icons.delete_outline, color: theme.colorScheme.error, size: 20),
+                                  icon: Icon(
+                                    Icons.delete_outline,
+                                    color: theme.colorScheme.error,
+                                    size: 20,
+                                  ),
                                   tooltip: 'Delete session',
                                   onPressed: viewModel.sessions.length == 1
                                       ? null
@@ -533,21 +587,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                               actions: [
                                                 TextButton(
                                                   child: Text('Cancel'),
-                                                  onPressed: () => Navigator.pop(context, false),
+                                                  onPressed: () =>
+                                                      Navigator.pop(
+                                                        context,
+                                                        false,
+                                                      ),
                                                 ),
                                                 ElevatedButton(
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: Colors.red,
-                                                    foregroundColor: Colors.white,
-                                                  ),
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            Colors.red,
+                                                        foregroundColor:
+                                                            Colors.white,
+                                                      ),
                                                   child: Text('Delete'),
-                                                  onPressed: () => Navigator.pop(context, true),
+                                                  onPressed: () =>
+                                                      Navigator.pop(
+                                                        context,
+                                                        true,
+                                                      ),
                                                 ),
                                               ],
                                             ),
                                           );
                                           if (confirmed == true) {
-                                            await viewModel.deleteSession(session.sessionId);
+                                            await viewModel.deleteSession(
+                                              session.sessionId,
+                                            );
                                           }
                                         },
                                 ),
@@ -556,7 +623,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             onTap: () async {
                               Navigator.pop(context);
                               if (!isCurrentSession) {
-                                await viewModel.switchToSession(session.sessionId);
+                                await viewModel.switchToSession(
+                                  session.sessionId,
+                                );
                                 _scrollController.jumpTo(0);
                                 setState(() {});
                               }
@@ -575,12 +644,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String _formatRelativeTime(DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);
-    
+
     if (diff.inMinutes < 1) return 'Just now';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
-    
+
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 
@@ -598,9 +667,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             child: Row(
               children: [
-                Icon(Icons.palette_outlined, 
-                  size: 20, 
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+                Icon(
+                  Icons.palette_outlined,
+                  size: 20,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Appearance',
@@ -614,25 +685,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          
+
           // Light Mode
           ListTile(
             dense: true,
             leading: Icon(
               Icons.light_mode,
-              color: currentThemeMode == ThemeMode.light 
-                  ? theme.colorScheme.primary 
+              color: currentThemeMode == ThemeMode.light
+                  ? theme.colorScheme.primary
                   : theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             title: Text(
               'Light Mode',
               style: TextStyle(
                 fontSize: 15,
-                fontWeight: currentThemeMode == ThemeMode.light 
-                    ? FontWeight.w600 
+                fontWeight: currentThemeMode == ThemeMode.light
+                    ? FontWeight.w600
                     : FontWeight.normal,
-                color: currentThemeMode == ThemeMode.light 
-                    ? theme.colorScheme.primary 
+                color: currentThemeMode == ThemeMode.light
+                    ? theme.colorScheme.primary
                     : theme.colorScheme.onSurface,
               ),
             ),
@@ -643,25 +714,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               await themeNotifier.setLightMode();
             },
           ),
-          
+
           // Dark Mode
           ListTile(
             dense: true,
             leading: Icon(
               Icons.dark_mode,
-              color: currentThemeMode == ThemeMode.dark 
-                  ? theme.colorScheme.primary 
+              color: currentThemeMode == ThemeMode.dark
+                  ? theme.colorScheme.primary
                   : theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             title: Text(
               'Dark Mode',
               style: TextStyle(
                 fontSize: 15,
-                fontWeight: currentThemeMode == ThemeMode.dark 
-                    ? FontWeight.w600 
+                fontWeight: currentThemeMode == ThemeMode.dark
+                    ? FontWeight.w600
                     : FontWeight.normal,
-                color: currentThemeMode == ThemeMode.dark 
-                    ? theme.colorScheme.primary 
+                color: currentThemeMode == ThemeMode.dark
+                    ? theme.colorScheme.primary
                     : theme.colorScheme.onSurface,
               ),
             ),
@@ -672,25 +743,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               await themeNotifier.setDarkMode();
             },
           ),
-          
+
           // System Default
           ListTile(
             dense: true,
             leading: Icon(
               Icons.brightness_auto,
-              color: currentThemeMode == ThemeMode.system 
-                  ? theme.colorScheme.primary 
+              color: currentThemeMode == ThemeMode.system
+                  ? theme.colorScheme.primary
                   : theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
             title: Text(
               'System Default',
               style: TextStyle(
                 fontSize: 15,
-                fontWeight: currentThemeMode == ThemeMode.system 
-                    ? FontWeight.w600 
+                fontWeight: currentThemeMode == ThemeMode.system
+                    ? FontWeight.w600
                     : FontWeight.normal,
-                color: currentThemeMode == ThemeMode.system 
-                    ? theme.colorScheme.primary 
+                color: currentThemeMode == ThemeMode.system
+                    ? theme.colorScheme.primary
                     : theme.colorScheme.onSurface,
               ),
             ),

@@ -79,4 +79,3 @@ class ChatSession {
     return text.isNotEmpty ? text : 'New Chat';
   }
 }
-

@@ -4,7 +4,9 @@ import '../../data/services/services.dart';
 import '../../data/services/theme_service.dart';
 
 /// Provider for managing theme mode state
-final themeModeProvider = StateNotifierProvider<ThemeNotifier, ThemeMode>((ref) {
+final themeModeProvider = StateNotifierProvider<ThemeNotifier, ThemeMode>((
+  ref,
+) {
   return ThemeNotifier(ref.read(themeServiceProvider));
 });
 
@@ -73,4 +75,3 @@ class ThemeNotifier extends StateNotifier<ThemeMode> {
     }
   }
 }
-

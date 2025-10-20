@@ -22,7 +22,7 @@ class MessageBubble extends StatelessWidget {
     final bubbleColor = hasError
         ? theme.colorScheme.errorContainer
         : (isUser ? theme.userBubbleColor : theme.assistantBubbleColor);
-    final textColor = hasError 
+    final textColor = hasError
         ? theme.colorScheme.onErrorContainer
         : (isUser ? theme.userBubbleTextColor : theme.assistantBubbleTextColor);
     final align = isUser ? Alignment.centerRight : Alignment.centerLeft;
@@ -115,7 +115,10 @@ class MessageBubble extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          minimumSize: const Size(double.infinity, 48), // Ensure minimum tap target
+                          minimumSize: const Size(
+                            double.infinity,
+                            48,
+                          ), // Ensure minimum tap target
                         ),
                         icon: const Icon(Icons.refresh_rounded, size: 20),
                         label: const Text(
@@ -136,18 +139,24 @@ class MessageBubble extends StatelessWidget {
                     Text(
                       _formatTimestamp(message.timestamp),
                       style: TextStyle(
-                        fontSize: 11, 
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                        fontSize: 11,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.4,
+                        ),
                       ),
                     ),
-                    if (message.latency != null && !isUser && message.text.isNotEmpty)
+                    if (message.latency != null &&
+                        !isUser &&
+                        message.text.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(left: 5.0),
                         child: Text(
                           '⏱ ${message.latency} ms',
                           style: TextStyle(
-                            fontSize: 11.5, 
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+                            fontSize: 11.5,
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.45,
+                            ),
                           ),
                         ),
                       ),
@@ -169,4 +178,3 @@ class MessageBubble extends StatelessWidget {
     }
   }
 }
-

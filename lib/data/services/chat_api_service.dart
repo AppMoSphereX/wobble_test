@@ -31,16 +31,13 @@ class ChatApiService {
 
   Future<Map<String, dynamic>> sendPrompt(String prompt) async {
     final start = DateTime.now();
-    
+
     try {
       final response = await http
           .post(
             Uri.parse(_baseUrl),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'model': 'gemma3:4b',
-              'prompt': prompt,
-            }),
+            body: jsonEncode({'model': 'gemma3:4b', 'prompt': prompt}),
           )
           .timeout(_defaultTimeout);
 
@@ -103,7 +100,10 @@ class ChatApiService {
     }
   }
 
-  Stream<String> sendPromptStream(String prompt, {CancellationToken? cancelToken}) async* {
+  Stream<String> sendPromptStream(
+    String prompt, {
+    CancellationToken? cancelToken,
+  }) async* {
     try {
       final request = http.Request('POST', Uri.parse(_baseUrl))
         ..headers['Content-Type'] = 'application/json'

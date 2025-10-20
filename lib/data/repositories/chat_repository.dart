@@ -7,11 +7,16 @@ class ChatRepository {
   Future<(String reply, int latencyMs)> sendMessage(String text) async {
     final result = await _api.sendPrompt(text);
     final reply = result['data']?['response']?.toString() ?? '';
-    final latency = result['latencyMs'] is int ? result['latencyMs'] as int : int.tryParse('${result['latencyMs']}') ?? 0;
+    final latency = result['latencyMs'] is int
+        ? result['latencyMs'] as int
+        : int.tryParse('${result['latencyMs']}') ?? 0;
     return (reply, latency);
   }
 
-  Stream<String> sendMessageStream(String text, {CancellationToken? cancelToken}) {
+  Stream<String> sendMessageStream(
+    String text, {
+    CancellationToken? cancelToken,
+  }) {
     return _api.sendPromptStream(text, cancelToken: cancelToken);
   }
 }

@@ -36,16 +36,13 @@ class TicketDetailsSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           // Header
           Padding(
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                Text(
-                  ticket.statusEmoji,
-                  style: const TextStyle(fontSize: 32),
-                ),
+                Text(ticket.statusEmoji, style: const TextStyle(fontSize: 32)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -71,9 +68,9 @@ class TicketDetailsSheet extends StatelessWidget {
               ],
             ),
           ),
-          
+
           const Divider(height: 1),
-          
+
           // Details
           Expanded(
             child: SingleChildScrollView(
@@ -81,9 +78,17 @@ class TicketDetailsSheet extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildDetailRow('Product', ticket.product, Icons.inventory_2_outlined),
+                  _buildDetailRow(
+                    'Product',
+                    ticket.product,
+                    Icons.inventory_2_outlined,
+                  ),
                   const SizedBox(height: 16),
-                  _buildDetailRow('Issue', ticket.issue, Icons.warning_amber_outlined),
+                  _buildDetailRow(
+                    'Issue',
+                    ticket.issue,
+                    Icons.warning_amber_outlined,
+                  ),
                   const SizedBox(height: 16),
                   _buildDetailRow(
                     'Priority',
@@ -91,20 +96,31 @@ class TicketDetailsSheet extends StatelessWidget {
                     Icons.flag_outlined,
                   ),
                   const SizedBox(height: 16),
-                  _buildDetailRow('Created', _formatDetailDate(ticket.createdAt), Icons.access_time),
+                  _buildDetailRow(
+                    'Created',
+                    _formatDetailDate(ticket.createdAt),
+                    Icons.access_time,
+                  ),
                   if (ticket.resolvedAt != null) ...[
                     const SizedBox(height: 16),
-                    _buildDetailRow('Resolved', _formatDetailDate(ticket.resolvedAt!), Icons.check_circle_outline),
+                    _buildDetailRow(
+                      'Resolved',
+                      _formatDetailDate(ticket.resolvedAt!),
+                      Icons.check_circle_outline,
+                    ),
                   ],
                   const SizedBox(height: 24),
-                  
+
                   // Actions
                   if (ticket.status == 'open') ...[
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          viewModel.updateTicketStatus(ticket.ticketId, 'resolved');
+                          viewModel.updateTicketStatus(
+                            ticket.ticketId,
+                            'resolved',
+                          );
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(
@@ -114,18 +130,24 @@ class TicketDetailsSheet extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          minimumSize: const Size(double.infinity, 48), // Minimum tap target
+                          minimumSize: const Size(
+                            double.infinity,
+                            48,
+                          ), // Minimum tap target
                         ),
                         icon: const Icon(Icons.check_circle),
                         label: const Text(
                           'Mark as Resolved',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 12),
                   ],
-                  
+
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
@@ -143,17 +165,23 @@ class TicketDetailsSheet extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         side: BorderSide(color: theme.colorScheme.primary),
-                        minimumSize: const Size(double.infinity, 48), // Minimum tap target
+                        minimumSize: const Size(
+                          double.infinity,
+                          48,
+                        ), // Minimum tap target
                       ),
                       icon: const Icon(Icons.chat_bubble_outline),
                       label: const Text(
                         'View Conversation',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
@@ -182,14 +210,16 @@ class TicketDetailsSheet extends StatelessWidget {
                             ],
                           ),
                         );
-                        
+
                         if (confirmed == true && context.mounted) {
                           Navigator.pop(context);
                           await viewModel.deleteTicket(ticket.ticketId);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Ticket ${ticket.ticketId} deleted'),
+                                content: Text(
+                                  'Ticket ${ticket.ticketId} deleted',
+                                ),
                                 backgroundColor: theme.colorScheme.error,
                               ),
                             );
@@ -203,12 +233,18 @@ class TicketDetailsSheet extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         side: BorderSide(color: theme.colorScheme.error),
-                        minimumSize: const Size(double.infinity, 48), // Minimum tap target
+                        minimumSize: const Size(
+                          double.infinity,
+                          48,
+                        ), // Minimum tap target
                       ),
                       icon: const Icon(Icons.delete_outline),
                       label: const Text(
                         'Delete Ticket',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -228,7 +264,11 @@ class TicketDetailsSheet extends StatelessWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 20, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+            Icon(
+              icon,
+              size: 20,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -256,7 +296,7 @@ class TicketDetailsSheet extends StatelessWidget {
             ),
           ],
         );
-      }
+      },
     );
   }
 
@@ -264,4 +304,3 @@ class TicketDetailsSheet extends StatelessWidget {
     return '${dt.day}/${dt.month}/${dt.year} at ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 }
-

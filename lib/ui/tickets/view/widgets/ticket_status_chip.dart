@@ -4,15 +4,12 @@ import '../../../theme/app_theme.dart';
 class TicketStatusChip extends StatelessWidget {
   final String status;
 
-  const TicketStatusChip({
-    super.key,
-    required this.status,
-  });
+  const TicketStatusChip({super.key, required this.status});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     Color bgColor;
     Color textColor;
     String label;
@@ -57,4 +54,3 @@ class TicketStatusChip extends StatelessWidget {
     );
   }
 }
-

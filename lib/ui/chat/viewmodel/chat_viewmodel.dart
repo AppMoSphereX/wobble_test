@@ -9,15 +9,18 @@ import '../../../domain/chat_session.dart';
 import '../../../domain/ticket.dart';
 import '../../../data/repositories/chat_repository.dart';
 import '../../../data/repositories/repositories.dart';
-import '../../../data/services/chat_api_service.dart' show CancellationToken, ChatApiException;
+import '../../../data/services/chat_api_service.dart'
+    show CancellationToken, ChatApiException;
 
 class SupportContext {
   String? product;
   String? issue;
   String? urgency;
   String? ticketId;
-  String state; // greeting | collecting_product | collecting_issue | collecting_urgency | confirming | complete
-  bool waitingForConfirmation; // True when we've asked for confirmation and waiting for response
+  String
+  state; // greeting | collecting_product | collecting_issue | collecting_urgency | confirming | complete
+  bool
+  waitingForConfirmation; // True when we've asked for confirmation and waiting for response
 
   SupportContext({
     this.product,
@@ -59,7 +62,7 @@ class SupportContext {
 class ChatViewModel extends ChangeNotifier {
   final ChatRepository _repo;
   final _uuid = const Uuid();
-  
+
   ChatViewModel(this._repo) {
     _loadSessions();
   }
@@ -67,10 +70,10 @@ class ChatViewModel extends ChangeNotifier {
   // Session management
   List<ChatSession> _sessions = [];
   String? _currentSessionId;
-  
+
   // Ticket management
   List<Ticket> _tickets = [];
-  
+
   // Current session state
   bool isLoading = false;
   bool _isCancelling = false;
@@ -87,7 +90,7 @@ class ChatViewModel extends ChangeNotifier {
 
   bool get isCancelling => _isCancelling;
   bool get canRetry => _retryCount < _maxRetries;
-  
+
   List<ChatSession> get sessions => _sessions;
   ChatSession? get currentSession {
     if (_currentSessionId == null) return null;
@@ -97,13 +100,15 @@ class ChatViewModel extends ChangeNotifier {
       return null;
     }
   }
-  
+
   List<Message> get messages => currentSession?.messages ?? [];
-  
+
   // Ticket getters
   List<Ticket> get tickets => _tickets;
-  List<Ticket> get openTickets => _tickets.where((t) => t.status == 'open').toList();
-  List<Ticket> get resolvedTickets => _tickets.where((t) => t.status == 'resolved').toList();
+  List<Ticket> get openTickets =>
+      _tickets.where((t) => t.status == 'open').toList();
+  List<Ticket> get resolvedTickets =>
+      _tickets.where((t) => t.status == 'resolved').toList();
   Ticket? get currentTicket {
     if (supportContext.ticketId == null) return null;
     try {
@@ -115,7 +120,7 @@ class ChatViewModel extends ChangeNotifier {
 
   Future<void> _loadSessions() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Load all sessions
     final sessionsJson = prefs.getString(_sessionsKey);
     if (sessionsJson != null) {
@@ -124,7 +129,7 @@ class ChatViewModel extends ChangeNotifier {
           .map((s) => ChatSession.fromJson(s as Map<String, dynamic>))
           .toList();
     }
-    
+
     // Load all tickets
     final ticketsJson = prefs.getString(_ticketsKey);
     if (ticketsJson != null) {
@@ -133,10 +138,10 @@ class ChatViewModel extends ChangeNotifier {
           .map((t) => Ticket.fromJson(t as Map<String, dynamic>))
           .toList();
     }
-    
+
     // Load current session ID
     _currentSessionId = prefs.getString(_currentSessionKey);
-    
+
     // Load support context for current session
     if (_currentSessionId != null) {
       final ctxJson = prefs.getString('$_contextKeyPrefix$_currentSessionId');
@@ -144,7 +149,7 @@ class ChatViewModel extends ChangeNotifier {
         supportContext = SupportContext.fromJson(jsonDecode(ctxJson));
       }
     }
-    
+
     // Create first session if no sessions exist
     if (_sessions.isEmpty) {
       await createNewSession();
@@ -154,7 +159,7 @@ class ChatViewModel extends ChangeNotifier {
         _currentSessionId = _sessions.first.sessionId;
       }
       notifyListeners();
-      
+
       // Greet if current session is empty
       if (currentSession?.messages.isEmpty ?? true) {
         await greet();
@@ -164,15 +169,15 @@ class ChatViewModel extends ChangeNotifier {
 
   Future<void> _saveSessions() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Save all sessions
     final sessionsJson = jsonEncode(_sessions.map((s) => s.toJson()).toList());
     await prefs.setString(_sessionsKey, sessionsJson);
-    
+
     // Save current session ID
     if (_currentSessionId != null) {
       await prefs.setString(_currentSessionKey, _currentSessionId!);
-      
+
       // Save support context for current session
       await prefs.setString(
         '$_contextKeyPrefix$_currentSessionId',
@@ -190,11 +195,11 @@ class ChatViewModel extends ChangeNotifier {
   Future<void> createNewSession() async {
     final sessionId = _uuid.v4();
     final newSession = ChatSession.create(sessionId);
-    
+
     _sessions.insert(0, newSession); // Add to beginning (most recent)
     _currentSessionId = sessionId;
     supportContext.reset();
-    
+
     await _saveSessions();
     notifyListeners();
     await greet();
@@ -202,9 +207,9 @@ class ChatViewModel extends ChangeNotifier {
 
   Future<void> switchToSession(String sessionId) async {
     if (_currentSessionId == sessionId) return;
-    
+
     _currentSessionId = sessionId;
-    
+
     // Load support context for this session
     final prefs = await SharedPreferences.getInstance();
     final ctxJson = prefs.getString('$_contextKeyPrefix$sessionId');
@@ -213,14 +218,14 @@ class ChatViewModel extends ChangeNotifier {
     } else {
       supportContext.reset();
     }
-    
+
     await prefs.setString(_currentSessionKey, sessionId);
     notifyListeners();
   }
 
   Future<void> deleteSession(String sessionId) async {
     _sessions.removeWhere((s) => s.sessionId == sessionId);
-    
+
     // If we deleted the current session, switch to another
     if (_currentSessionId == sessionId) {
       if (_sessions.isNotEmpty) {
@@ -229,19 +234,21 @@ class ChatViewModel extends ChangeNotifier {
         await createNewSession();
       }
     }
-    
+
     // Clean up context for deleted session
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('$_contextKeyPrefix$sessionId');
-    
+
     await _saveSessions();
     notifyListeners();
   }
 
   Future<void> clearCurrentSession() async {
     if (_currentSessionId == null) return;
-    
-    final sessionIndex = _sessions.indexWhere((s) => s.sessionId == _currentSessionId);
+
+    final sessionIndex = _sessions.indexWhere(
+      (s) => s.sessionId == _currentSessionId,
+    );
     if (sessionIndex != -1) {
       final clearedSession = _sessions[sessionIndex].copyWith(
         messages: [],
@@ -249,7 +256,7 @@ class ChatViewModel extends ChangeNotifier {
       );
       _sessions[sessionIndex] = clearedSession;
       supportContext.reset();
-      
+
       await _saveSessions();
       notifyListeners();
       await greet();
@@ -258,34 +265,41 @@ class ChatViewModel extends ChangeNotifier {
 
   Future<void> greet() async {
     if (_currentSessionId == null) return;
-    
+
     // Reset context for new conversation
     supportContext.reset();
-    
+
     _updateCurrentSessionMessages((messages) {
-      messages.add(Message(
-        text: "Hi! I'm your support assistant. 👋\n\n"
-            "I can help you create a support ticket. I'll need to collect a few details:\n"
-            "📦 Product name\n"
-            "⚠️ Issue description\n"
-            "🎯 Priority level\n\n"
-            "What product can I help you with today?",
-        role: 'assistant',
-      ));
+      messages.add(
+        Message(
+          text:
+              "Hi! I'm your support assistant. 👋\n\n"
+              "I can help you create a support ticket. I'll need to collect a few details:\n"
+              "📦 Product name\n"
+              "⚠️ Issue description\n"
+              "🎯 Priority level\n\n"
+              "What product can I help you with today?",
+          role: 'assistant',
+        ),
+      );
     });
-    
+
     await _saveSessions();
     notifyListeners();
   }
 
   void _updateCurrentSessionMessages(void Function(List<Message>) updater) {
     if (_currentSessionId == null) return;
-    
-    final sessionIndex = _sessions.indexWhere((s) => s.sessionId == _currentSessionId);
+
+    final sessionIndex = _sessions.indexWhere(
+      (s) => s.sessionId == _currentSessionId,
+    );
     if (sessionIndex != -1) {
-      final currentMessages = List<Message>.from(_sessions[sessionIndex].messages);
+      final currentMessages = List<Message>.from(
+        _sessions[sessionIndex].messages,
+      );
       updater(currentMessages);
-      
+
       _sessions[sessionIndex] = _sessions[sessionIndex].copyWith(
         messages: currentMessages,
         lastUpdatedAt: DateTime.now(),
@@ -305,7 +319,7 @@ class ChatViewModel extends ChangeNotifier {
 
   Future<void> sendMessageStream(String text, {bool isRetry = false}) async {
     if (_currentSessionId == null) return;
-    
+
     _isCancelling = false;
     isLoading = true;
     notifyListeners();
@@ -317,7 +331,7 @@ class ChatViewModel extends ChangeNotifier {
     if (!isRetry) {
       _lastUserMessage = text;
       _retryCount = 0;
-      
+
       // Add user message
       _updateCurrentSessionMessages((messages) {
         messages.add(Message(text: text, role: 'user'));
@@ -333,12 +347,15 @@ class ChatViewModel extends ChangeNotifier {
       messages.add(Message(text: '', role: 'assistant'));
     });
     notifyListeners();
-    
+
     final currentMessages = messages;
     int assistantIndex = currentMessages.length - 1;
     String fullText = '';
 
-    final stream = _repo.sendMessageStream(prompt, cancelToken: _currentCancelToken);
+    final stream = _repo.sendMessageStream(
+      prompt,
+      cancelToken: _currentCancelToken,
+    );
 
     final start = DateTime.now();
 
@@ -351,7 +368,7 @@ class ChatViewModel extends ChangeNotifier {
           return; // cut off streaming instantly and keep partial response
         }
         fullText += chunk;
-        
+
         _updateCurrentSessionMessages((messages) {
           if (assistantIndex < messages.length) {
             messages[assistantIndex] = Message(
@@ -364,13 +381,13 @@ class ChatViewModel extends ChangeNotifier {
       }
       final end = DateTime.now();
       final latency = end.difference(start).inMilliseconds;
-      
+
       // Success - reset retry count
       _retryCount = 0;
-      
+
       // Analyze fullText and slot-fill context
       _updateSupportContext(fullText, userInput: text);
-      
+
       // Write the last chunk with latency
       _updateCurrentSessionMessages((messages) {
         if (assistantIndex < messages.length) {
@@ -381,18 +398,18 @@ class ChatViewModel extends ChangeNotifier {
           );
         }
       });
-      
+
       isLoading = false;
       await _saveSessions();
       notifyListeners();
     } catch (e) {
       isLoading = false;
       _retryCount++;
-      
+
       // Handle the error and create error message
       String errorMessage;
       String errorType;
-      
+
       if (e is ChatApiException) {
         errorMessage = e.message;
         errorType = e.type;
@@ -400,25 +417,27 @@ class ChatViewModel extends ChangeNotifier {
         errorMessage = 'An unexpected error occurred';
         errorType = 'unknown_error';
       }
-      
+
       // Remove empty assistant message if exists
       _updateCurrentSessionMessages((messages) {
-        if (messages.isNotEmpty && 
-            messages.last.role == 'assistant' && 
+        if (messages.isNotEmpty &&
+            messages.last.role == 'assistant' &&
             messages.last.text.isEmpty) {
           messages.removeLast();
         }
-        
+
         // Add error message
-        messages.add(Message(
-          text: 'Failed to get response',
-          role: 'assistant',
-          hasError: true,
-          errorMessage: errorMessage,
-          errorType: errorType,
-        ));
+        messages.add(
+          Message(
+            text: 'Failed to get response',
+            role: 'assistant',
+            hasError: true,
+            errorMessage: errorMessage,
+            errorType: errorType,
+          ),
+        );
       });
-      
+
       await _saveSessions();
       notifyListeners();
     }
@@ -426,7 +445,7 @@ class ChatViewModel extends ChangeNotifier {
 
   Future<void> retryLastMessage() async {
     if (_lastUserMessage == null) return;
-    
+
     // Remove the error message
     _updateCurrentSessionMessages((messages) {
       if (messages.isNotEmpty && messages.last.hasError) {
@@ -434,7 +453,7 @@ class ChatViewModel extends ChangeNotifier {
       }
     });
     notifyListeners();
-    
+
     // Retry with the last user message
     await sendMessageStream(_lastUserMessage!, isRetry: true);
   }
@@ -473,14 +492,17 @@ class ChatViewModel extends ChangeNotifier {
 
     // Add completion message to chat
     _updateCurrentSessionMessages((messages) {
-      messages.add(Message(
-        text: '✅ Ticket #$ticketId created successfully!\n\n'
-            '📦 Product: ${ticket.product}\n'
-            '⚠️ Issue: ${ticket.issue}\n'
-            '${ticket.urgencyEmoji} Priority: ${ticket.urgency}\n\n'
-            'We\'ll follow up with you shortly. Is there anything else I can help you with?',
-        role: 'assistant',
-      ));
+      messages.add(
+        Message(
+          text:
+              '✅ Ticket #$ticketId created successfully!\n\n'
+              '📦 Product: ${ticket.product}\n'
+              '⚠️ Issue: ${ticket.issue}\n'
+              '${ticket.urgencyEmoji} Priority: ${ticket.urgency}\n\n'
+              'We\'ll follow up with you shortly. Is there anything else I can help you with?',
+          role: 'assistant',
+        ),
+      );
     });
 
     await _saveSessions();
@@ -506,14 +528,18 @@ class ChatViewModel extends ChangeNotifier {
   }
 
   // Smart prompting with field extraction
-  void _updateSupportContext(String assistantReply, {required String userInput}) {
+  void _updateSupportContext(
+    String assistantReply, {
+    required String userInput,
+  }) {
     // Parse extracted data from LLM response
     _parseExtractedData(assistantReply);
 
     // Handle state transitions based on collected data
     switch (supportContext.state) {
       case 'greeting':
-        if (supportContext.product != null && supportContext.product != 'none') {
+        if (supportContext.product != null &&
+            supportContext.product != 'none') {
           supportContext.state = 'collecting_issue';
           supportContext.waitingForConfirmation = false;
         }
@@ -525,7 +551,8 @@ class ChatViewModel extends ChangeNotifier {
         }
         break;
       case 'collecting_urgency':
-        if (supportContext.urgency != null && supportContext.urgency != 'none') {
+        if (supportContext.urgency != null &&
+            supportContext.urgency != 'none') {
           supportContext.state = 'confirming';
           // Mark that we're now waiting for confirmation
           supportContext.waitingForConfirmation = true;
@@ -535,16 +562,16 @@ class ChatViewModel extends ChangeNotifier {
         // Only process confirmation if we're actively waiting for it
         if (supportContext.waitingForConfirmation) {
           final userLower = userInput.toLowerCase();
-          if (userLower.contains('yes') || 
-              userLower.contains('confirm') || 
+          if (userLower.contains('yes') ||
+              userLower.contains('confirm') ||
               userLower.contains('submit') ||
               userLower.contains('ok') ||
               userLower.contains('sure')) {
             supportContext.waitingForConfirmation = false;
             createTicket();
-          } else if (userLower.contains('no') || 
-                     userLower.contains('cancel') ||
-                     userLower.contains('wait')) {
+          } else if (userLower.contains('no') ||
+              userLower.contains('cancel') ||
+              userLower.contains('wait')) {
             // Reset for new input
             supportContext.reset();
             supportContext.state = 'greeting';
@@ -554,7 +581,7 @@ class ChatViewModel extends ChangeNotifier {
       case 'complete':
         // Check if user wants to create another ticket
         final userLower = userInput.toLowerCase();
-        if (userLower.contains('new ticket') || 
+        if (userLower.contains('new ticket') ||
             userLower.contains('another issue') ||
             userLower.contains('different problem')) {
           supportContext.reset();
@@ -577,8 +604,10 @@ class ChatViewModel extends ChangeNotifier {
       final data = dataMatch.group(1)!;
 
       // Parse product
-      final productMatch = RegExp(r'product:\s*(.+?)(?:\n|$)', caseSensitive: false)
-          .firstMatch(data);
+      final productMatch = RegExp(
+        r'product:\s*(.+?)(?:\n|$)',
+        caseSensitive: false,
+      ).firstMatch(data);
       if (productMatch != null) {
         final product = productMatch.group(1)!.trim();
         if (product != 'none' && product != 'unknown' && product.isNotEmpty) {
@@ -587,8 +616,10 @@ class ChatViewModel extends ChangeNotifier {
       }
 
       // Parse issue
-      final issueMatch = RegExp(r'issue:\s*(.+?)(?:\n|$)', caseSensitive: false)
-          .firstMatch(data);
+      final issueMatch = RegExp(
+        r'issue:\s*(.+?)(?:\n|$)',
+        caseSensitive: false,
+      ).firstMatch(data);
       if (issueMatch != null) {
         final issue = issueMatch.group(1)!.trim();
         if (issue != 'none' && issue != 'unknown' && issue.isNotEmpty) {
@@ -597,8 +628,10 @@ class ChatViewModel extends ChangeNotifier {
       }
 
       // Parse urgency
-      final urgencyMatch = RegExp(r'urgency:\s*(.+?)(?:\n|$)', caseSensitive: false)
-          .firstMatch(data);
+      final urgencyMatch = RegExp(
+        r'urgency:\s*(.+?)(?:\n|$)',
+        caseSensitive: false,
+      ).firstMatch(data);
       if (urgencyMatch != null) {
         final urgency = urgencyMatch.group(1)!.trim().toLowerCase();
         if (urgency == 'high' || urgency == 'medium' || urgency == 'low') {
@@ -615,7 +648,8 @@ class ChatViewModel extends ChangeNotifier {
 
     switch (ctx.state) {
       case 'greeting':
-        prompt = '''You are a helpful support ticket assistant. Your job is to collect information about a support issue.
+        prompt =
+            '''You are a helpful support ticket assistant. Your job is to collect information about a support issue.
 
 Currently collecting: PRODUCT NAME
 
@@ -635,7 +669,8 @@ Remember: Be friendly, clear, and concise. Ask one question at a time.''';
         break;
 
       case 'collecting_issue':
-        prompt = '''You are a helpful support ticket assistant collecting issue details.
+        prompt =
+            '''You are a helpful support ticket assistant collecting issue details.
 
 Product: ${ctx.product}
 
@@ -655,7 +690,8 @@ Then respond naturally, acknowledging the issue if you understood it, or asking 
         break;
 
       case 'collecting_urgency':
-        prompt = '''You are a helpful support ticket assistant collecting urgency level.
+        prompt =
+            '''You are a helpful support ticket assistant collecting urgency level.
 
 Product: ${ctx.product}
 Issue: ${ctx.issue}
@@ -678,7 +714,8 @@ Note: Interpret "urgent", "asap", "critical" as "high", "not urgent" as "low", a
         break;
 
       case 'confirming':
-        prompt = '''You are a helpful support ticket assistant ready to create a ticket.
+        prompt =
+            '''You are a helpful support ticket assistant ready to create a ticket.
 
 Ticket Details:
 - Product: ${ctx.product}
@@ -703,7 +740,8 @@ Should I create this ticket? (Reply yes to confirm)"''';
         break;
 
       case 'complete':
-        prompt = '''You are a helpful support ticket assistant. A ticket has been created.
+        prompt =
+            '''You are a helpful support ticket assistant. A ticket has been created.
 
 Ticket: ${ctx.ticketId}
 Product: ${ctx.product}
@@ -721,7 +759,8 @@ Respond helpfully to the user's message. They may have follow-up questions or wa
         break;
 
       default:
-        prompt = '''You are a helpful support ticket assistant.
+        prompt =
+            '''You are a helpful support ticket assistant.
 
 User: $userInput
 

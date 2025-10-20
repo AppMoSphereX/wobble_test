@@ -20,28 +20,28 @@ class Ticket {
   });
 
   factory Ticket.fromJson(Map<String, dynamic> json) => Ticket(
-        ticketId: json['ticketId'] as String,
-        sessionId: json['sessionId'] as String,
-        product: json['product'] as String,
-        issue: json['issue'] as String,
-        urgency: json['urgency'] as String,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        resolvedAt: json['resolvedAt'] != null
-            ? DateTime.parse(json['resolvedAt'] as String)
-            : null,
-        status: json['status'] as String? ?? 'open',
-      );
+    ticketId: json['ticketId'] as String,
+    sessionId: json['sessionId'] as String,
+    product: json['product'] as String,
+    issue: json['issue'] as String,
+    urgency: json['urgency'] as String,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    resolvedAt: json['resolvedAt'] != null
+        ? DateTime.parse(json['resolvedAt'] as String)
+        : null,
+    status: json['status'] as String? ?? 'open',
+  );
 
   Map<String, dynamic> toJson() => {
-        'ticketId': ticketId,
-        'sessionId': sessionId,
-        'product': product,
-        'issue': issue,
-        'urgency': urgency,
-        'createdAt': createdAt.toIso8601String(),
-        'resolvedAt': resolvedAt?.toIso8601String(),
-        'status': status,
-      };
+    'ticketId': ticketId,
+    'sessionId': sessionId,
+    'product': product,
+    'issue': issue,
+    'urgency': urgency,
+    'createdAt': createdAt.toIso8601String(),
+    'resolvedAt': resolvedAt?.toIso8601String(),
+    'status': status,
+  };
 
   Ticket copyWith({
     String? ticketId,
@@ -91,4 +91,3 @@ class Ticket {
     }
   }
 }
-

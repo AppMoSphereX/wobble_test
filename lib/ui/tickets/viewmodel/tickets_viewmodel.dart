@@ -44,4 +44,3 @@ final ticketsViewModelProvider = ChangeNotifierProvider((ref) {
   final chatViewModel = ref.watch(chatViewModelProvider);
   return TicketsViewModel(chatViewModel);
 });
-

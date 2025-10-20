@@ -15,7 +15,7 @@ class ThemeService {
   Future<ThemeMode> loadThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
     final themeName = prefs.getString(_themeKey);
-    
+
     if (themeName == null) {
       return ThemeMode.system;
     }
@@ -37,4 +37,3 @@ class ThemeService {
     await prefs.remove(_themeKey);
   }
 }
-

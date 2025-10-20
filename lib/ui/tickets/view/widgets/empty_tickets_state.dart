@@ -37,4 +37,3 @@ class EmptyTicketsState extends StatelessWidget {
     );
   }
 }
-
