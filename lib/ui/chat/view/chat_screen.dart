@@ -2,79 +2,301 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../viewmodel/chat_viewmodel.dart';
 
-class ChatScreen extends ConsumerWidget {
-  ChatScreen({super.key});
-
-  final TextEditingController _controller = TextEditingController();
+class ChatScreen extends ConsumerStatefulWidget {
+  const ChatScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends ConsumerState<ChatScreen> {
+  final TextEditingController _controller = TextEditingController();
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() => setState(() {}));
+  }
+
+  @override
+  void didUpdateWidget(covariant ChatScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _scrollToBottom();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final viewModel = ref.watch(chatViewModelProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     return Scaffold(
-      appBar: AppBar(title: const Text('Wobble Chat - Ollama LLM')),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: viewModel.messages.length,
-              itemBuilder: (context, index) {
-                final msg = viewModel.messages[index];
-                return ListTile(
-                  title: Align(
-                    alignment: msg.role == 'user'
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: msg.role == 'user'
-                            ? Colors.blue[200]
-                            : Colors.grey[300],
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(msg.text),
-                          if (msg.latency != null)
-                            Text('⏱ ${msg.latency} ms',
-                                style: TextStyle(fontSize: 11, color: Colors.black54))
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+      backgroundColor: const Color(0xFFF7F7FC),
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        centerTitle: false,
+        titleSpacing: 0,
+        leadingWidth: 68,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: CircleAvatar(
+            backgroundColor: Colors.deepPurple.shade100,
+            child: Text('🤖', style: TextStyle(fontSize: 24)),
           ),
-          if (viewModel.isLoading)
-            Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: CircularProgressIndicator(),
+        ),
+        title: Row(
+          children: [
+            Text(
+              'Wobble Chat',
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.bold,
+                fontSize: 21,
+              ),
             ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 12.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    onSubmitted: (_) => _send(viewModel),
-                    decoration: const InputDecoration(
-                      labelText: 'Enter message...'
-                    ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.refresh_rounded,
+              color: Colors.deepPurple,
+              size: 26,
+            ),
+            tooltip: 'Start Over',
+            onPressed: () async {
+              final yes = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text('Start Over?'),
+                  content: Text(
+                    'This will remove all chat history from device. Continue?',
                   ),
+                  actions: [
+                    TextButton(
+                      child: Text('Cancel'),
+                      onPressed: () => Navigator.pop(context, false),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text('Start Over'),
+                      onPressed: () => Navigator.pop(context, true),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: Icon(Icons.send),
-                  onPressed: viewModel.isLoading
-                      ? null
-                      : () => _send(viewModel),
-                ),
-              ],
-            ),
+              );
+              if (yes == true) {
+                await ref.read(chatViewModelProvider).clearMessages();
+                _scrollController.jumpTo(0);
+                setState(() {});
+              }
+            },
           ),
         ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 16,
+                ),
+                itemCount: viewModel.messages.length,
+                itemBuilder: (context, index) {
+                  final msg = viewModel.messages[index];
+                  final isUser = msg.role == 'user';
+                  final bubbleColor = isUser
+                      ? Colors.deepPurple[400]
+                      : Colors.white;
+                  final textColor = isUser ? Colors.white : Colors.black87;
+                  final align = isUser
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft;
+                  return Align(
+                    alignment: align,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 170),
+                        padding: EdgeInsets.all(14),
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.77,
+                        ),
+                        decoration: BoxDecoration(
+                          color: bubbleColor,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(18),
+                            topRight: Radius.circular(18),
+                            bottomLeft: Radius.circular(isUser ? 18 : 4),
+                            bottomRight: Radius.circular(isUser ? 4 : 18),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.07),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            SelectableText(
+                              msg.text,
+                              style: TextStyle(
+                                fontSize: 16.5,
+                                color: textColor,
+                                fontFamily: 'RobotoMono',
+                              ),
+                              textAlign: TextAlign.left,
+                            ),
+                            if (msg.latency != null &&
+                                !isUser &&
+                                msg.text.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4.0),
+                                child: Text(
+                                  '⏱ ${msg.latency} ms',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: Colors.black45,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (viewModel.isLoading &&
+                (viewModel.messages.isEmpty ||
+                    viewModel.messages.last.role == 'assistant'))
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 2,
+                  horizontal: 18,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 8,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: const LoadingDots(),
+                    ),
+                  ],
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 10.0,
+                right: 10.0,
+                bottom: 18.0,
+                top: 7,
+              ),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.06),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        enabled: !viewModel.isLoading,
+                        onSubmitted: (_) {
+                          _send(viewModel);
+                        },
+                        minLines: 1,
+                        maxLines: 5,
+                        style: TextStyle(fontSize: 16.7, color: Colors.black87),
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          hintText: 'Type your message...',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                    FloatingActionButton(
+                      elevation: 0,
+                      mini: true,
+                      backgroundColor:
+                          (_controller.text.trim().isEmpty || viewModel.isLoading)
+                          ? Colors.grey[300]
+                          : Colors.deepPurpleAccent.shade200,
+                      foregroundColor: Colors.white,
+                      onPressed:
+                          viewModel.isLoading || _controller.text.trim().isEmpty
+                          ? null
+                          : () {
+                              _send(viewModel);
+                            },
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 2.0),
+                        child: Icon(
+                          Icons.send_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -85,5 +307,45 @@ class ChatScreen extends ConsumerWidget {
       viewModel.sendMessageStream(text);
       _controller.clear();
     }
+  }
+}
+
+class LoadingDots extends StatefulWidget {
+  const LoadingDots({super.key});
+  @override
+  State<LoadingDots> createState() => _LoadingDotsState();
+}
+
+class _LoadingDotsState extends State<LoadingDots>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: Duration(milliseconds: 900),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        int tick = (_controller.value * 4).floor();
+        String dots = '.' * (tick % 4);
+        return Text(
+          'Thinking$dots',
+          style: TextStyle(fontSize: 15, color: Colors.deepPurple),
+        );
+      },
+    );
   }
 }

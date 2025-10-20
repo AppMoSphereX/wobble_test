@@ -18,8 +18,6 @@ class ChatApiService {
     final end = DateTime.now();
     final latency = end.difference(start).inMilliseconds;
 
-    debugPrint(response.body); // Still print for debug
-
     // Combine all 'response' fields from each JSON line
     final lines = response.body.split('\n');
     final buffer = StringBuffer();
