@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../viewmodel/chat_viewmodel.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/loading_dots.dart';
+import '../../theme/app_theme.dart';
+import '../../theme/theme_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -50,24 +52,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final viewModel = ref.watch(chatViewModelProvider);
+    final theme = Theme.of(context);
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: theme.chatBackgroundColor,
       drawer: _buildSessionDrawer(context, viewModel),
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        centerTitle: false,
-        titleSpacing: 0,
-        leadingWidth: 68,
         leading: Builder(
-          builder: (context) => Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: GestureDetector(
-              onTap: () => Scaffold.of(context).openDrawer(),
-              child: CircleAvatar(
-                backgroundColor: Colors.deepPurple.shade100,
-                child: Text('🤖', style: TextStyle(fontSize: 24)),
+          builder: (context) => Semantics(
+            label: 'Open chat sessions menu',
+            button: true,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: GestureDetector(
+                onTap: () => Scaffold.of(context).openDrawer(),
+                child: CircleAvatar(
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  child: const Text('🤖', style: TextStyle(fontSize: 24)),
+                ),
               ),
             ),
           ),
@@ -79,7 +81,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Text(
               'Wobble Chat',
               style: TextStyle(
-                color: Colors.black87,
+                color: theme.colorScheme.onSurface,
                 fontWeight: FontWeight.bold,
                 fontSize: 21,
               ),
@@ -90,7 +92,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               Text(
                 viewModel.currentSession!.displayTitle,
                 style: TextStyle(
-                  color: Colors.black54,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   fontSize: 12,
                   fontWeight: FontWeight.normal,
                 ),
@@ -103,7 +105,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           IconButton(
             icon: Icon(
               Icons.add_circle_outline_rounded,
-              color: Colors.deepPurple,
+              color: theme.colorScheme.primary,
               size: 26,
             ),
             tooltip: 'New Chat',
@@ -116,7 +118,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           IconButton(
             icon: Icon(
               Icons.refresh_rounded,
-              color: Colors.deepPurple,
+              color: theme.colorScheme.primary,
               size: 26,
             ),
             tooltip: 'Clear Current Chat',
@@ -190,13 +192,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: theme.assistantBubbleColor,
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
+                            color: theme.shadowColor.withValues(alpha: 0.1),
                             blurRadius: 8,
-                            offset: Offset(0, 1),
+                            offset: const Offset(0, 1),
                           ),
                         ],
                       ),
@@ -213,76 +215,93 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 top: 7,
               ),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.inputBackgroundColor,
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withValues(alpha: 0.06),
+                      color: theme.shadowColor.withValues(alpha: 0.1),
                       blurRadius: 6,
-                      offset: Offset(0, 2),
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: Row(
                   children: [
                     Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        enabled: !viewModel.isLoading && !viewModel.isCancelling,
-                        onSubmitted: (_) {
-                          _send(viewModel);
-                        },
-                        minLines: 1,
-                        maxLines: 5,
-                        style: TextStyle(fontSize: 16.7, color: Colors.black87),
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Type your message...',
-                          hintStyle: TextStyle(color: Colors.grey[400]),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 14,
+                      child: Semantics(
+                        label: 'Message input field',
+                        textField: true,
+                        child: TextField(
+                          controller: _controller,
+                          enabled: !viewModel.isLoading && !viewModel.isCancelling,
+                          onSubmitted: (_) {
+                            _send(viewModel);
+                          },
+                          minLines: 1,
+                          maxLines: 5,
+                          style: TextStyle(fontSize: 16.7, color: theme.colorScheme.onSurface),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            hintText: 'Type your message...',
+                            hintStyle: TextStyle(color: theme.hintColor),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 14,
+                            ),
                           ),
                         ),
                       ),
                     ),
                     if ((viewModel.isLoading && !viewModel.isCancelling))
-                      Padding(
-                        padding: const EdgeInsets.only(right: 2.0),
-                        child: FloatingActionButton(
-                          heroTag: 'stop_btn',
-                          elevation: 0,
-                          mini: true,
-                          backgroundColor: Colors.redAccent,
-                          onPressed: () {
-                            viewModel.stopCurrentChat();
-                            setState(() {});
-                          },
-                          child: Icon(Icons.stop, color: Colors.white, size: 24),
+                      Semantics(
+                        label: 'Stop generating message',
+                        button: true,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 2.0),
+                          child: FloatingActionButton(
+                            heroTag: 'stop_btn',
+                            elevation: 0,
+                            mini: true,
+                            backgroundColor: theme.colorScheme.error,
+                            tooltip: 'Stop generating',
+                            onPressed: () {
+                              viewModel.stopCurrentChat();
+                              setState(() {});
+                            },
+                            child: const Icon(Icons.stop, color: Colors.white, size: 24),
+                          ),
                         ),
                       ),
-                    FloatingActionButton(
-                      elevation: 0,
-                      mini: true,
-                      backgroundColor:
-                          (_controller.text.trim().isEmpty || viewModel.isLoading || viewModel.isCancelling)
-                          ? Colors.grey[300]
-                          : Colors.deepPurpleAccent.shade200,
-                      foregroundColor: Colors.white,
-                      onPressed:
-                          viewModel.isLoading || viewModel.isCancelling || _controller.text.trim().isEmpty
-                          ? null
-                          : () {
-                              _send(viewModel);
-                            },
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 2.0),
-                        child: Icon(
-                          Icons.send_rounded,
-                          color: Colors.white,
-                          size: 24,
+                    Semantics(
+                      label: _controller.text.trim().isEmpty 
+                          ? 'Send button disabled, enter a message first'
+                          : 'Send message',
+                      button: true,
+                      enabled: !viewModel.isLoading && !viewModel.isCancelling && _controller.text.trim().isNotEmpty,
+                      child: FloatingActionButton(
+                        elevation: 0,
+                        mini: true,
+                        backgroundColor:
+                            (_controller.text.trim().isEmpty || viewModel.isLoading || viewModel.isCancelling)
+                            ? theme.disabledColor
+                            : theme.colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        tooltip: 'Send message',
+                        onPressed:
+                            viewModel.isLoading || viewModel.isCancelling || _controller.text.trim().isEmpty
+                            ? null
+                            : () {
+                                _send(viewModel);
+                              },
+                        child: const Padding(
+                          padding: EdgeInsets.only(left: 2.0),
+                          child: Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                         ),
                       ),
                     ),
@@ -309,18 +328,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildSessionDrawer(BuildContext context, ChatViewModel viewModel) {
+    final theme = Theme.of(context);
     return Drawer(
       child: SafeArea(
         child: Column(
           children: [
             // Header
             Container(
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.deepPurple[50],
+                color: theme.drawerHeaderColor,
                 border: Border(
-                  bottom: BorderSide(color: Colors.grey[300]!, width: 1),
+                  bottom: BorderSide(color: theme.dividerColor, width: 1),
                 ),
               ),
               child: Column(
@@ -328,24 +348,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.chat_bubble_outline, color: Colors.deepPurple, size: 28),
-                      SizedBox(width: 12),
+                      Icon(Icons.chat_bubble_outline, color: theme.colorScheme.primary, size: 28),
+                      const SizedBox(width: 12),
                       Text(
                         'Chat Sessions',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     '${viewModel.sessions.length} ${viewModel.sessions.length == 1 ? 'session' : 'sessions'}',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.black54,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -365,15 +385,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     setState(() {});
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    minimumSize: const Size(double.infinity, 48), // Ensure minimum tap target
                   ),
-                  icon: Icon(Icons.add_rounded, size: 22),
-                  label: Text(
+                  icon: const Icon(Icons.add_rounded, size: 22),
+                  label: const Text(
                     'New Chat',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
@@ -381,7 +402,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ),
             
-            Divider(height: 1),
+            const Divider(height: 1),
+            
+            // Theme Settings
+            _buildThemeSettings(context, ref),
+            
+            const Divider(height: 1),
             
             // Session List
             Expanded(
@@ -389,7 +415,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ? Center(
                       child: Text(
                         'No sessions yet',
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(color: theme.hintColor),
                       ),
                     )
                   : ListView.builder(
@@ -405,9 +431,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           direction: DismissDirection.endToStart,
                           background: Container(
                             alignment: Alignment.centerRight,
-                            padding: EdgeInsets.only(right: 20),
-                            color: Colors.red,
-                            child: Icon(Icons.delete, color: Colors.white),
+                            padding: const EdgeInsets.only(right: 20),
+                            color: theme.colorScheme.error,
+                            child: const Icon(Icons.delete, color: Colors.white),
                           ),
                           confirmDismiss: (direction) async {
                             if (viewModel.sessions.length == 1) {
@@ -455,14 +481,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           },
                           child: ListTile(
                             selected: isCurrentSession,
-                            selectedTileColor: Colors.deepPurple[50],
+                            selectedTileColor: theme.selectedTileColor,
                             leading: CircleAvatar(
                               backgroundColor: isCurrentSession
-                                  ? Colors.deepPurple
-                                  : Colors.grey[300],
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.surfaceContainerHighest,
                               child: Icon(
                                 Icons.chat_bubble,
-                                color: isCurrentSession ? Colors.white : Colors.grey[600],
+                                color: isCurrentSession 
+                                    ? theme.colorScheme.onPrimary 
+                                    : theme.colorScheme.onSurfaceVariant,
                                 size: 20,
                               ),
                             ),
@@ -472,23 +500,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontWeight: isCurrentSession ? FontWeight.w600 : FontWeight.normal,
-                                color: isCurrentSession ? Colors.deepPurple[700] : Colors.black87,
+                                color: isCurrentSession 
+                                    ? theme.colorScheme.primary 
+                                    : theme.colorScheme.onSurface,
                               ),
                             ),
                             subtitle: Text(
                               '$messageCount ${messageCount == 1 ? 'message' : 'messages'} • ${_formatRelativeTime(session.lastUpdatedAt)}',
-                              style: TextStyle(fontSize: 12),
+                              style: const TextStyle(fontSize: 12),
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (isCurrentSession)
-                                  Icon(Icons.check_circle, color: Colors.deepPurple, size: 20),
+                                  Icon(Icons.check_circle, color: theme.colorScheme.primary, size: 20),
                                 if (!isCurrentSession)
-                                  Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-                                SizedBox(width: 4),
+                                  Icon(Icons.chevron_right, color: theme.hintColor, size: 20),
+                                const SizedBox(width: 4),
                                 IconButton(
-                                  icon: Icon(Icons.delete_outline, color: Colors.red[400], size: 20),
+                                  icon: Icon(Icons.delete_outline, color: theme.colorScheme.error, size: 20),
                                   tooltip: 'Delete session',
                                   onPressed: viewModel.sessions.length == 1
                                       ? null
@@ -552,5 +582,134 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (diff.inDays < 7) return '${diff.inDays}d ago';
     
     return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  Widget _buildThemeSettings(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final themeNotifier = ref.read(themeModeProvider.notifier);
+    final currentThemeMode = ref.watch(themeModeProvider);
+
+    return Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: Row(
+              children: [
+                Icon(Icons.palette_outlined, 
+                  size: 20, 
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+                const SizedBox(width: 8),
+                Text(
+                  'Appearance',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          
+          // Light Mode
+          ListTile(
+            dense: true,
+            leading: Icon(
+              Icons.light_mode,
+              color: currentThemeMode == ThemeMode.light 
+                  ? theme.colorScheme.primary 
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+            title: Text(
+              'Light Mode',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: currentThemeMode == ThemeMode.light 
+                    ? FontWeight.w600 
+                    : FontWeight.normal,
+                color: currentThemeMode == ThemeMode.light 
+                    ? theme.colorScheme.primary 
+                    : theme.colorScheme.onSurface,
+              ),
+            ),
+            trailing: currentThemeMode == ThemeMode.light
+                ? Icon(Icons.check, color: theme.colorScheme.primary, size: 20)
+                : null,
+            onTap: () async {
+              await themeNotifier.setLightMode();
+            },
+          ),
+          
+          // Dark Mode
+          ListTile(
+            dense: true,
+            leading: Icon(
+              Icons.dark_mode,
+              color: currentThemeMode == ThemeMode.dark 
+                  ? theme.colorScheme.primary 
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+            title: Text(
+              'Dark Mode',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: currentThemeMode == ThemeMode.dark 
+                    ? FontWeight.w600 
+                    : FontWeight.normal,
+                color: currentThemeMode == ThemeMode.dark 
+                    ? theme.colorScheme.primary 
+                    : theme.colorScheme.onSurface,
+              ),
+            ),
+            trailing: currentThemeMode == ThemeMode.dark
+                ? Icon(Icons.check, color: theme.colorScheme.primary, size: 20)
+                : null,
+            onTap: () async {
+              await themeNotifier.setDarkMode();
+            },
+          ),
+          
+          // System Default
+          ListTile(
+            dense: true,
+            leading: Icon(
+              Icons.brightness_auto,
+              color: currentThemeMode == ThemeMode.system 
+                  ? theme.colorScheme.primary 
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+            title: Text(
+              'System Default',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: currentThemeMode == ThemeMode.system 
+                    ? FontWeight.w600 
+                    : FontWeight.normal,
+                color: currentThemeMode == ThemeMode.system 
+                    ? theme.colorScheme.primary 
+                    : theme.colorScheme.onSurface,
+              ),
+            ),
+            subtitle: Text(
+              'Follow device settings',
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+            trailing: currentThemeMode == ThemeMode.system
+                ? Icon(Icons.check, color: theme.colorScheme.primary, size: 20)
+                : null,
+            onTap: () async {
+              await themeNotifier.setSystemMode();
+            },
+          ),
+        ],
+      ),
+    );
   }
 }

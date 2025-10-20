@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../theme/app_theme.dart';
 
 class TicketStatusChip extends StatelessWidget {
   final String status;
@@ -10,29 +11,31 @@ class TicketStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     Color bgColor;
     Color textColor;
     String label;
 
     switch (status) {
       case 'open':
-        bgColor = Colors.blue.shade50;
-        textColor = Colors.blue.shade700;
+        bgColor = theme.ticketOpenBackground;
+        textColor = theme.ticketOpenText;
         label = 'OPEN';
         break;
       case 'resolved':
-        bgColor = Colors.green.shade50;
-        textColor = Colors.green.shade700;
+        bgColor = theme.ticketResolvedBackground;
+        textColor = theme.ticketResolvedText;
         label = 'RESOLVED';
         break;
       case 'closed':
-        bgColor = Colors.grey.shade50;
-        textColor = Colors.grey.shade700;
+        bgColor = theme.ticketClosedBackground;
+        textColor = theme.ticketClosedText;
         label = 'CLOSED';
         break;
       default:
-        bgColor = Colors.grey.shade50;
-        textColor = Colors.grey.shade700;
+        bgColor = theme.ticketClosedBackground;
+        textColor = theme.ticketClosedText;
         label = status.toUpperCase();
     }
 

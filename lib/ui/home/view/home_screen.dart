@@ -35,19 +35,18 @@ class _HomeScreenState extends State<HomeScreen> {
             _selectedIndex = index;
           });
         },
-        selectedItemColor: Colors.deepPurple,
-        unselectedItemColor: Colors.grey,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),
             activeIcon: Icon(Icons.chat_bubble),
             label: 'Chat',
+            tooltip: 'Navigate to chat',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.confirmation_num_outlined),
             activeIcon: Icon(Icons.confirmation_num),
             label: 'Tickets',
+            tooltip: 'View support tickets',
           ),
         ],
       ),

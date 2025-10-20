@@ -28,6 +28,7 @@ class _LoadingDotsState extends State<LoadingDots>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -35,7 +36,7 @@ class _LoadingDotsState extends State<LoadingDots>
         String dots = '.' * (tick % 4);
         return Text(
           'Thinking$dots',
-          style: const TextStyle(fontSize: 15, color: Colors.deepPurple),
+          style: TextStyle(fontSize: 15, color: theme.colorScheme.primary),
         );
       },
     );

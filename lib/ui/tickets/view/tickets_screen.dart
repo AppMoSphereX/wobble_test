@@ -4,6 +4,7 @@ import '../viewmodel/tickets_viewmodel.dart';
 import 'widgets/empty_tickets_state.dart';
 import 'widgets/ticket_card.dart';
 import 'widgets/ticket_details_sheet.dart';
+import '../../theme/app_theme.dart';
 
 class TicketsScreen extends ConsumerWidget {
   final VoidCallback? onViewConversation;
@@ -14,27 +15,26 @@ class TicketsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final viewModel = ref.watch(ticketsViewModelProvider);
     final allTickets = viewModel.allTickets;
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7FC),
+      backgroundColor: theme.chatBackgroundColor,
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'My Tickets',
               style: TextStyle(
-                color: Colors.black87,
+                color: theme.colorScheme.onSurface,
                 fontWeight: FontWeight.bold,
                 fontSize: 21,
               ),
             ),
             Text(
               '${allTickets.length} ${allTickets.length == 1 ? 'ticket' : 'tickets'}',
-              style: const TextStyle(
-                color: Colors.black54,
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 12,
                 fontWeight: FontWeight.normal,
               ),

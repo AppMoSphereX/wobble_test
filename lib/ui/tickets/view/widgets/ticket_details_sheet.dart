@@ -17,11 +17,12 @@ class TicketDetailsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
@@ -31,7 +32,7 @@ class TicketDetailsSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -52,10 +53,10 @@ class TicketDetailsSheet extends StatelessWidget {
                     children: [
                       Text(
                         ticket.ticketId,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.deepPurple,
+                          color: theme.colorScheme.primary,
                         ),
                       ),
                       TicketStatusChip(status: ticket.status),
@@ -64,6 +65,7 @@ class TicketDetailsSheet extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
+                  tooltip: 'Close',
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -112,6 +114,7 @@ class TicketDetailsSheet extends StatelessWidget {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          minimumSize: const Size(double.infinity, 48), // Minimum tap target
                         ),
                         icon: const Icon(Icons.check_circle),
                         label: const Text(
@@ -134,12 +137,13 @@ class TicketDetailsSheet extends StatelessWidget {
                         }
                       },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.deepPurple,
+                        foregroundColor: theme.colorScheme.primary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        side: const BorderSide(color: Colors.deepPurple),
+                        side: BorderSide(color: theme.colorScheme.primary),
+                        minimumSize: const Size(double.infinity, 48), // Minimum tap target
                       ),
                       icon: const Icon(Icons.chat_bubble_outline),
                       label: const Text(
@@ -186,19 +190,20 @@ class TicketDetailsSheet extends StatelessWidget {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Ticket ${ticket.ticketId} deleted'),
-                                backgroundColor: Colors.red,
+                                backgroundColor: theme.colorScheme.error,
                               ),
                             );
                           }
                         }
                       },
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
+                        foregroundColor: theme.colorScheme.error,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        side: const BorderSide(color: Colors.red),
+                        side: BorderSide(color: theme.colorScheme.error),
+                        minimumSize: const Size(double.infinity, 48), // Minimum tap target
                       ),
                       icon: const Icon(Icons.delete_outline),
                       label: const Text(
@@ -217,36 +222,41 @@ class TicketDetailsSheet extends StatelessWidget {
   }
 
   Widget _buildDetailRow(String label, String value, IconData icon) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
+    return Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 20, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      }
     );
   }
 

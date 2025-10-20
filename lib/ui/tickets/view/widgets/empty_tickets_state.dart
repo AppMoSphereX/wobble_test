@@ -5,6 +5,7 @@ class EmptyTicketsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -12,7 +13,7 @@ class EmptyTicketsState extends StatelessWidget {
           Icon(
             Icons.inbox_outlined,
             size: 80,
-            color: Colors.grey[300],
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
           ),
           const SizedBox(height: 16),
           Text(
@@ -20,7 +21,7 @@ class EmptyTicketsState extends StatelessWidget {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 8),
@@ -28,7 +29,7 @@ class EmptyTicketsState extends StatelessWidget {
             'Start a chat to create your first ticket',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],

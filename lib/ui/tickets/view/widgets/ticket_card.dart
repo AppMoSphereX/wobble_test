@@ -14,20 +14,20 @@ class TicketCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isOpen = ticket.status == 'open';
     final isResolved = ticket.status == 'resolved';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: isOpen
-              ? Colors.deepPurple.shade200
+              ? theme.colorScheme.primary.withValues(alpha: 0.4)
               : isResolved
-                  ? Colors.green.shade200
-                  : Colors.grey.shade200,
+                  ? Colors.green.withValues(alpha: 0.4)
+                  : theme.colorScheme.outline.withValues(alpha: 0.4),
           width: 1.5,
         ),
       ),
@@ -53,17 +53,17 @@ class TicketCard extends StatelessWidget {
                       children: [
                         Text(
                           ticket.ticketId,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.deepPurple,
+                            color: theme.colorScheme.primary,
                           ),
                         ),
                         Text(
                           _formatDate(ticket.createdAt),
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[600],
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -77,15 +77,17 @@ class TicketCard extends StatelessWidget {
               // Product
               Row(
                 children: [
-                  Icon(Icons.inventory_2_outlined, size: 16, color: Colors.grey[600]),
+                  Icon(Icons.inventory_2_outlined, 
+                    size: 16, 
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       ticket.product,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.black87,
+                        color: theme.colorScheme.onSurface,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -99,14 +101,16 @@ class TicketCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.warning_amber_outlined, size: 16, color: Colors.grey[600]),
+                  Icon(Icons.warning_amber_outlined, 
+                    size: 16, 
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       ticket.issue,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey[700],
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
