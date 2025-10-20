@@ -1,234 +1,289 @@
+# Flutter Chatbot Assistant
 
-# Flutter Chat App (MVVM + Local Ollama Integration)
-
-This document outlines the **technical structure, architecture, and setup** for a Flutter chat application using a **local LLM (gemma3:4b via Ollama)** with **MVVM**, **Riverpod**, and a clean layered project layout.
+A Flutter-based customer support chatbot application with local LLM integration using Ollama, built with MVVM architecture and Riverpod state management.
 
 ---
 
-## ✅ Project Architecture
+## 🏗️ Architecture Diagram
 
-### Folder Structure
+```
+┌─────────────────┐
+│  Flutter App    │
+│  (UI Layer)     │
+└────────┬────────┘
+         │
+         ├─ Riverpod State Management
+         │
+┌────────▼────────┐
+│   ViewModels    │
+│  (MVVM Logic)   │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│  Repositories   │
+│ (Data Sources)  │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│    Services     │
+│  (API Clients)  │
+└────────┬────────┘
+         │
+         ├─────────────────┐
+         │                 │
+┌────────▼────────┐   ┌───▼────────┐
+│ Local Ollama    │   │ Shared     │
+│ gemma3:4b       │   │ Preferences│
+│ localhost:11434 │   │ (Storage)  │
+└─────────────────┘   └────────────┘
 ```
 
-lib/
-├─ ui/
-│   ├─ <feature_name>/
-│   │   ├─ view/
-│   │   ├─ viewmodel/
-│   │   └─ widgets/
-├─ domain/                (optional)
-└─ data/
-├─ repositories/
-│   ├─ repositories.dart   // exports all repos as Riverpod providers
-└─ services/
-├─ services.dart       // exports all services as Riverpod providers
-
-
-### MVVM Rules
-- `ui/feature/view` → Widgets and screens
-- `ui/feature/viewmodel` → State + logic
-- `ui/feature/widgets` → Reusable UI components
-- `data/repositories` → Single source of truth per data type
-- `data/services` → External access (Ollama HTTP, storage, etc.)
-- `domain/` → Optional (models, mappers, use cases)
+**Architecture Flow:**
+- **UI Layer:** Flutter widgets consume ViewModels via Riverpod providers
+- **ViewModel Layer:** Business logic and state management
+- **Repository Layer:** Single source of truth for data operations
+- **Service Layer:** External integrations (Ollama API, local storage)
+- **LLM Provider:** Local Ollama instance running gemma3:4b model
 
 ---
 
-## ✅ State Management (Riverpod)
+## 🤖 LLM Provider Selection & Prompt Template
 
-### Core Principles
-- Use **flutter_riverpod**
-- `services.dart` exposes **all services** as providers
-- `repositories.dart` exposes **all repositories** as providers
-- Each ViewModel creates **its own provider**
-- ViewModels use `ref` to access repositories
-- UI manually instantiates and consumes ViewModels — **no DI in UI layer**
+### Provider: Ollama (gemma3:4b)
 
-### Example Structure
+**Why Ollama + gemma3:4b?**
+- ✅ **No API keys required** - runs completely locally
+- ✅ **Fast responses** - 4B parameter model optimized for speed
+- ✅ **Privacy-first** - all data stays on local machine
+- ✅ **Easy setup** - single command installation
+- ✅ **Cost-effective** - free to use, no usage limits
+
+### Prompt Template
+
+The app uses a context-aware prompt system for support ticket scenarios:
 
 ```dart
-// data/services/services.dart
-final chatApiServiceProvider = Provider<ChatApiService>((ref) {
-  return ChatApiService();
-});
+// Context-aware system prompt for support assistant
+final systemPrompt = """
+You are a helpful customer support assistant. 
+You help users with their support tickets and general inquiries.
+Be concise, friendly, and professional.
+When discussing support tickets, ask relevant questions to understand the issue.
+""";
 
-// data/repositories/repositories.dart
-final chatRepositoryProvider = Provider<ChatRepository>((ref) {
-  final api = ref.read(chatApiServiceProvider);
-  return ChatRepository(api);
-});
+// User message format
+final userPrompt = """
+$systemPrompt
 
-// ui/chat/viewmodel/chat_viewmodel.dart
-final chatViewModelProvider = ChangeNotifierProvider((ref) {
-  final repo = ref.read(chatRepositoryProvider);
-  return ChatViewModel(repo, ref);
-});
-````
-
-In the UI:
-
-```dart
-final viewModel = ref.watch(chatViewModelProvider);
+User: $userMessage
+Assistant:
+""";
 ```
 
----
-
-## ✅ Local LLM Integration (Ollama)
-
-### Model
-
-* **gemma3:4b** (local)
-* No API key required
-
-### Setup
-
-```
-ollama pull gemma3:4b
-ollama run gemma3:4b
-```
-
-### Endpoint
-
+For streaming responses, the app uses:
 ```
 POST http://localhost:11434/api/generate
 {
   "model": "gemma3:4b",
-  "prompt": "<message>"
+  "prompt": "<context + user_message>",
+  "stream": true
 }
 ```
 
-### Service Example
+---
+
+## 🚀 Setup Instructions
+
+### Prerequisites
+- Flutter SDK (>=3.0.0)
+- Dart SDK (>=3.0.0)
+- Ollama CLI
+
+### 1. Install Ollama
+
+**macOS/Linux:**
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+**Windows:**
+Download installer from [ollama.com](https://ollama.com/download)
+
+### 2. Pull and Run the Model
+
+```bash
+# Pull the gemma3:4b model
+ollama pull gemma3:4b
+
+# Run Ollama server (runs on localhost:11434 by default)
+ollama serve
+```
+
+**Verify Ollama is running:**
+```bash
+curl http://localhost:11434/api/generate -d '{
+  "model": "gemma3:4b",
+  "prompt": "Hello"
+}'
+```
+
+### 3. Install Flutter Dependencies
+
+```bash
+cd wobble_test
+flutter pub get
+```
+
+### 4. Run the Application
+
+```bash
+# Run on your preferred platform
+flutter run
+
+# Or specify platform
+flutter run -d chrome      # Web
+flutter run -d macos       # macOS
+flutter run -d ios         # iOS
+flutter run -d android     # Android
+```
+
+### Environment Variables
+
+No environment variables required - the app connects to Ollama at `http://localhost:11434` by default.
+If we wanted to connect to external APIs, we would get the API-key as an environment variable.
+On a more secure approach, we would have backend-api for connecting to apis, so we didn't have to provide any API-key
+to the app.
+
+**Optional Configuration:**
+You can modify the Ollama endpoint in `lib/data/services/chat_api_service.dart`:
 
 ```dart
-class ChatApiService {
-  final _baseUrl = 'http://localhost:11434/api/generate';
+static const String baseUrl = 'http://localhost:11434';
+static const String model = 'gemma3:4b';
+```
 
-  Future<Map<String, dynamic>> sendPrompt(String prompt) async {
-    final start = DateTime.now();
-    final response = await http.post(
-      Uri.parse(_baseUrl),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'model': 'gemma3:4b',
-        'prompt': prompt,
-      }),
+---
+
+## ⚡ Latency Observations
+
+### Response Time Metrics
+
+```
+Average first token response time: Around 1 to 2 seconds ( on local model )
+Average full response time: Around 3 to 4 seconds
+```
+
+### Optimization Attempts
+
+1. **Streaming Implementation**
+   - Enabled streaming responses for real-time token display
+   - Improves perceived latency by ~XX%
+   - Implementation: `stream: true` in Ollama API calls
+
+2. **Model Selection**
+   - Chose gemma3:4b (4B parameters) over larger models
+   - Trade-off: Speed vs capability
+
+---
+
+## ⚠️ Failure Modes & Error Handling
+
+### 1. Network Errors
+
+**Scenario:** Ollama server not running or unreachable
+
+**Handling:**
+```dart
+try {
+  final response = await _api.sendMessage(message);
+  // Process response
+} catch (e) {
+  if (e is SocketException) {
+    return Message.error(
+      'Cannot connect to Ollama. Please ensure it is running.',
     );
-    final end = DateTime.now();
-    final latency = end.difference(start).inMilliseconds;
-
-    return {
-      'data': jsonDecode(response.body),
-      'latencyMs': latency,
-    };
   }
+  return Message.error('Network error: ${e.toString()}');
 }
 ```
 
----
+**User Experience:**
+- Display error message in chat
+- Show troubleshooting tips
+- Maintain conversation history
 
-## ✅ Repositories
+### 2. Request Timeouts
 
-Repositories wrap the services and are the **single source of truth**:
+**Scenario:** LLM takes too long to respond
 
+**Handling:**
 ```dart
-class ChatRepository {
-  final ChatApiService _api;
-  ChatRepository(this._api);
-
-  Future<(String reply, int latencyMs)> sendMessage(String text) async {
-    final result = await _api.sendPrompt(text);
-    final reply = result['data']?['response'] ?? '';
-    final latency = result['latencyMs'];
-    return (reply, latency);
-  }
-}
+final response = await _api.sendMessage(message)
+    .timeout(Duration(seconds: 30));
 ```
 
----
+**User Experience:**
+- 30-second timeout for full responses
+- User can cancel mid-response
+- Partial streaming responses are preserved
 
-## ✅ ViewModels
+### 3. User Cancellation
 
-Each feature ViewModel:
+**Scenario:** User clicks stop button during LLM response
 
-* Defines its own provider
-* Uses repositories via `ref.read`
-* Exposes state to views
-
+**Handling:**
 ```dart
-class ChatViewModel extends ChangeNotifier {
-  final ChatRepository _repo;
-  final Ref _ref;
+// StreamController with cancellation support
+_streamSubscription = responseStream.listen(
+  (token) => _appendToken(token),
+  onDone: () => _finishMessage(),
+  onError: (e) => _handleError(e),
+  cancelOnError: true,
+);
 
-  ChatViewModel(this._repo, this._ref);
-
-  List<Message> messages = [];
-  bool isLoading = false;
-
-  Future<void> sendMessage(String text) async {
-    isLoading = true;
-    notifyListeners();
-
-    final (reply, latency) = await _repo.sendMessage(text);
-    messages.add(Message(text: text, role: 'user'));
-    messages.add(Message(text: reply, role: 'assistant', latency: latency));
-
-    isLoading = false;
-    notifyListeners();
-  }
+// User cancels
+void cancelResponse() {
+  _streamSubscription?.cancel();
+  _markMessageAsCancelled();
 }
 ```
 
----
+**User Experience:**
+- Stop button appears during streaming
+- Partial response is saved
+- Clear indication that response was cancelled
 
-## ✅ Latency Handling
+### 4. Invalid Model Responses
 
-Latency is tracked per message:
+**Scenario:** Ollama returns malformed or empty response
 
-* Capture `DateTime.now()` before and after the request
-* Store it in ViewModel or message model
-* Can display or log locally
-
----
-
-## ✅ Local Ticket Logic (Optional)
-
-If ticket creation is needed:
-
-* Implement locally in ViewModel
-* Example: `T-${DateTime.now().millisecondsSinceEpoch}`
-
----
-
-## ✅ UI Layer
-
-* Instantiates the ViewModel using provider
-* Calls ViewModel methods
-* Listens to state changes
-* **No dependency injection on UI level**
-
-Example:
-
+**Handling:**
 ```dart
-final viewModel = ref.watch(chatViewModelProvider);
-
-...
-onPressed: () {
-  viewModel.sendMessage(inputController.text);
+if (responseData['response']?.isEmpty ?? true) {
+  return Message.error(
+    'Model returned empty response. Please try again.',
+  );
 }
 ```
 
----
+**User Experience:**
+- Friendly error message
+- Option to retry
+- Conversation context preserved
 
-## ✅ Summary
+### 5. Rate Limiting / System Overload
 
-* ✅ No backend — local Ollama only
-* ✅ MVVM with proper folder structure
-* ✅ Riverpod for all layers
-* ✅ Services + Repositories as providers
-* ✅ Each ViewModel has its own provider
-* ✅ No DI in UI
-* ✅ gemma3:4b via `http://localhost:11434/api/generate`
-* ✅ Latency handled locally
+**Scenario:** Too many concurrent requests to Ollama
+
+**Handling:**
+- Queue system for sequential processing
+- Disable send button during active requests
+- Visual loading indicators
+
+**User Experience:**
+- One message at a time
+- Clear loading states
+- Smooth UX even under load
 
 ---
 
@@ -243,21 +298,14 @@ onPressed: () {
 - **Why Cut:** Local development focus, 2-hour time constraint
 - **Next Steps:** Add Express.js/Node.js backend with proper API endpoints
 
-#### 2. **Accessibility & Dark Mode**
-- **Missing:** Dark mode support, comprehensive accessibility labels
-- **Current:** Basic accessibility, light mode only
-- **Impact:** Limited accessibility, no theme support
-- **Why Cut:** UI polish deprioritized for core functionality
-- **Next Steps:** Add theme switching, comprehensive accessibility
-
-#### 3. **Input Validation & Security**
+#### 2. **Input Validation & Security**
 - **Missing:** Prompt length limits, input sanitization, request timeouts
 - **Current:** No validation layer, basic error handling
 - **Impact:** Potential security issues, no input constraints
 - **Why Cut:** Local development environment, time constraints
 - **Next Steps:** Add input validation, sanitization, security headers
 
-#### 4. **Performance Optimizations**
+#### 3. **Performance Optimizations**
 - **Missing:** Advanced cancellation logic, request queuing, performance monitoring
 - **Current:** Basic cancellation, streaming support
 - **Impact:** Suboptimal performance under load, limited monitoring
