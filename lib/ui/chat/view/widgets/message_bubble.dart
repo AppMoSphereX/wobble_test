@@ -20,10 +20,10 @@ class MessageBubble extends StatelessWidget {
     final isUser = message.role == 'user';
     final hasError = message.hasError;
     final bubbleColor = hasError
-        ? theme.colorScheme.errorContainer
+        ? theme.errorBubbleBackground
         : (isUser ? theme.userBubbleColor : theme.assistantBubbleColor);
     final textColor = hasError
-        ? theme.colorScheme.onErrorContainer
+        ? theme.colorScheme.onSurface
         : (isUser ? theme.userBubbleTextColor : theme.assistantBubbleTextColor);
     final align = isUser ? Alignment.centerRight : Alignment.centerLeft;
 
@@ -40,7 +40,7 @@ class MessageBubble extends StatelessWidget {
           decoration: BoxDecoration(
             color: bubbleColor,
             border: hasError
-                ? Border.all(color: theme.colorScheme.error, width: 1.5)
+                ? Border.all(color: theme.errorBubbleBorder, width: 1)
                 : null,
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(18),
@@ -51,7 +51,7 @@ class MessageBubble extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: hasError
-                    ? theme.colorScheme.error.withValues(alpha: 0.15)
+                    ? theme.errorBubbleBorder.withValues(alpha: 0.15)
                     : theme.shadowColor.withValues(alpha: 0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
@@ -68,8 +68,8 @@ class MessageBubble extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.error_outline_rounded,
-                        color: theme.colorScheme.error,
+                        Icons.info_outline_rounded,
+                        color: theme.errorTextColor,
                         size: 20,
                       ),
                       const SizedBox(width: 6),
@@ -78,7 +78,7 @@ class MessageBubble extends StatelessWidget {
                           message.errorMessage ?? 'An error occurred',
                           style: TextStyle(
                             fontSize: 13.5,
-                            color: theme.colorScheme.error,
+                            color: theme.errorTextColor,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -106,8 +106,10 @@ class MessageBubble extends StatelessWidget {
                       child: ElevatedButton.icon(
                         onPressed: onRetry,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.error,
-                          foregroundColor: theme.colorScheme.onError,
+                          backgroundColor: theme.errorRetryButtonBackground,
+                          foregroundColor: theme.errorRetryButtonText,
+                          elevation: 0,
+                          shadowColor: Colors.transparent,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 10,
@@ -140,9 +142,9 @@ class MessageBubble extends StatelessWidget {
                       _formatTimestamp(message.timestamp),
                       style: TextStyle(
                         fontSize: 11,
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.4,
-                        ),
+                        color: isUser
+                            ? theme.userBubbleTextColor.withValues(alpha: 0.65)
+                            : theme.colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                     if (message.latency != null &&
@@ -155,7 +157,7 @@ class MessageBubble extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11.5,
                             color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.45,
+                              alpha: 0.5,
                             ),
                           ),
                         ),

@@ -217,4 +217,35 @@ extension AppThemeExtension on ThemeData {
   Color get ticketClosedText {
     return colorScheme.onSurface.withValues(alpha: 0.7);
   }
+
+  // Error message colors (softer, more modern approach)
+  Color get errorBubbleBackground {
+    return brightness == Brightness.light
+        ? const Color(0xFFFFF4E6) // Soft warm beige
+        : const Color(0xFF2D2416); // Dark warm brown
+  }
+
+  Color get errorBubbleBorder {
+    return brightness == Brightness.light
+        ? const Color(0xFFFFB74D).withValues(alpha: 0.3) // Soft amber with transparency
+        : const Color(0xFFFF9800).withValues(alpha: 0.2); // Soft orange with transparency
+  }
+
+  Color get errorTextColor {
+    return brightness == Brightness.light
+        ? const Color(0xFFE65100) // Deep orange
+        : const Color(0xFFFFB74D); // Light amber
+  }
+
+  Color get errorRetryButtonBackground {
+    return brightness == Brightness.light
+        ? const Color(0xFFFF9800) // Warm amber/orange
+        : const Color(0xFFFFB74D); // Light amber
+  }
+
+  Color get errorRetryButtonText {
+    return brightness == Brightness.light
+        ? Colors.white
+        : const Color(0xFF1C1B1F); // Dark text on light button
+  }
 }
