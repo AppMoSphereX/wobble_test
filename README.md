@@ -243,42 +243,21 @@ onPressed: () {
 - **Why Cut:** Local development focus, 2-hour time constraint
 - **Next Steps:** Add Express.js/Node.js backend with proper API endpoints
 
-#### 2. **Comprehensive Error Handling & Retry UI**
-- **Missing:** Error state indicators, retry buttons, auto-retry logic
-- **Current:** Basic error handling, no user-facing retry mechanism
-- **Impact:** Poor UX when requests fail, no recovery options
-- **Why Cut:** Focus on core chat functionality first
-- **Next Steps:** Add error states, retry buttons, exponential backoff
-
-#### 3. **Session Management System**
-- **Missing:** `sessionId` generation, session-based conversation tracking
-- **Current:** Simple message persistence without session concept
-- **Impact:** No conversation isolation, no session-based features
-- **Why Cut:** MVP focus on basic chat functionality
-- **Next Steps:** Add session UUIDs, session-based persistence
-
-#### 4. **Structured Support Ticket Flow**
-- **Missing:** Robust field collection, confirmation steps, ticket ID generation
-- **Current:** Basic context tracking with simple heuristics
-- **Impact:** Limited ticket creation workflow, no structured data extraction
-- **Why Cut:** Complex LLM prompt engineering and state management
-- **Next Steps:** Implement proper field extraction, confirmation UI, ticket generation
-
-#### 5. **Accessibility & Dark Mode**
+#### 2. **Accessibility & Dark Mode**
 - **Missing:** Dark mode support, comprehensive accessibility labels
 - **Current:** Basic accessibility, light mode only
 - **Impact:** Limited accessibility, no theme support
 - **Why Cut:** UI polish deprioritized for core functionality
 - **Next Steps:** Add theme switching, comprehensive accessibility
 
-#### 6. **Input Validation & Security**
+#### 3. **Input Validation & Security**
 - **Missing:** Prompt length limits, input sanitization, request timeouts
 - **Current:** No validation layer, basic error handling
 - **Impact:** Potential security issues, no input constraints
 - **Why Cut:** Local development environment, time constraints
 - **Next Steps:** Add input validation, sanitization, security headers
 
-#### 7. **Performance Optimizations**
+#### 4. **Performance Optimizations**
 - **Missing:** Advanced cancellation logic, request queuing, performance monitoring
 - **Current:** Basic cancellation, streaming support
 - **Impact:** Suboptimal performance under load, limited monitoring
@@ -288,9 +267,6 @@ onPressed: () {
 ### What Would Be Improved Next If we had enough time
 
 1. **Backend API Layer** - Add Node.js server with proper endpoints
-2. **Error Recovery** - Comprehensive retry logic and error states
-3. **Session Management** - UUID-based session tracking
-4. **Structured Tickets** - Proper field extraction and confirmation flow
 5. **Accessibility** - Dark mode and comprehensive a11y support
 6. **Security** - Input validation and sanitization
 7. **Performance** - Request optimization and monitoring

@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:async';
 import '../../../domain/message.dart';
 import '../../../domain/chat_session.dart';
+import '../../../domain/ticket.dart';
 import '../../../data/repositories/chat_repository.dart';
 import '../../../data/repositories/repositories.dart';
 import '../../../data/services/chat_api_service.dart' show CancellationToken, ChatApiException;
@@ -16,6 +17,7 @@ class SupportContext {
   String? urgency;
   String? ticketId;
   String state; // greeting | collecting_product | collecting_issue | collecting_urgency | confirming | complete
+  bool waitingForConfirmation; // True when we've asked for confirmation and waiting for response
 
   SupportContext({
     this.product,
@@ -23,6 +25,7 @@ class SupportContext {
     this.urgency,
     this.ticketId,
     this.state = 'greeting',
+    this.waitingForConfirmation = false,
   });
 
   factory SupportContext.fromJson(Map<String, dynamic> json) => SupportContext(
@@ -31,6 +34,7 @@ class SupportContext {
     urgency: json['urgency'],
     ticketId: json['ticketId'],
     state: json['state'] ?? 'greeting',
+    waitingForConfirmation: json['waitingForConfirmation'] ?? false,
   );
 
   Map<String, dynamic> toJson() => {
@@ -39,6 +43,7 @@ class SupportContext {
     'urgency': urgency,
     'ticketId': ticketId,
     'state': state,
+    'waitingForConfirmation': waitingForConfirmation,
   };
 
   void reset() {
@@ -47,6 +52,7 @@ class SupportContext {
     urgency = null;
     ticketId = null;
     state = 'greeting';
+    waitingForConfirmation = false;
   }
 }
 
@@ -62,6 +68,9 @@ class ChatViewModel extends ChangeNotifier {
   List<ChatSession> _sessions = [];
   String? _currentSessionId;
   
+  // Ticket management
+  List<Ticket> _tickets = [];
+  
   // Current session state
   bool isLoading = false;
   bool _isCancelling = false;
@@ -74,6 +83,7 @@ class ChatViewModel extends ChangeNotifier {
   static const _sessionsKey = 'chat_sessions';
   static const _currentSessionKey = 'current_session_id';
   static const _contextKeyPrefix = 'support_context_';
+  static const _ticketsKey = 'tickets';
 
   bool get isCancelling => _isCancelling;
   bool get canRetry => _retryCount < _maxRetries;
@@ -89,6 +99,19 @@ class ChatViewModel extends ChangeNotifier {
   }
   
   List<Message> get messages => currentSession?.messages ?? [];
+  
+  // Ticket getters
+  List<Ticket> get tickets => _tickets;
+  List<Ticket> get openTickets => _tickets.where((t) => t.status == 'open').toList();
+  List<Ticket> get resolvedTickets => _tickets.where((t) => t.status == 'resolved').toList();
+  Ticket? get currentTicket {
+    if (supportContext.ticketId == null) return null;
+    try {
+      return _tickets.firstWhere((t) => t.ticketId == supportContext.ticketId);
+    } catch (e) {
+      return null;
+    }
+  }
 
   Future<void> _loadSessions() async {
     final prefs = await SharedPreferences.getInstance();
@@ -99,6 +122,15 @@ class ChatViewModel extends ChangeNotifier {
       final List decoded = jsonDecode(sessionsJson);
       _sessions = decoded
           .map((s) => ChatSession.fromJson(s as Map<String, dynamic>))
+          .toList();
+    }
+    
+    // Load all tickets
+    final ticketsJson = prefs.getString(_ticketsKey);
+    if (ticketsJson != null) {
+      final List decoded = jsonDecode(ticketsJson);
+      _tickets = decoded
+          .map((t) => Ticket.fromJson(t as Map<String, dynamic>))
           .toList();
     }
     
@@ -147,6 +179,12 @@ class ChatViewModel extends ChangeNotifier {
         jsonEncode(supportContext.toJson()),
       );
     }
+  }
+
+  Future<void> _saveTickets() async {
+    final prefs = await SharedPreferences.getInstance();
+    final ticketsJson = jsonEncode(_tickets.map((t) => t.toJson()).toList());
+    await prefs.setString(_ticketsKey, ticketsJson);
   }
 
   Future<void> createNewSession() async {
@@ -221,9 +259,17 @@ class ChatViewModel extends ChangeNotifier {
   Future<void> greet() async {
     if (_currentSessionId == null) return;
     
+    // Reset context for new conversation
+    supportContext.reset();
+    
     _updateCurrentSessionMessages((messages) {
       messages.add(Message(
-        text: "Hi! I'm your support assistant. What product can I help you with today?",
+        text: "Hi! I'm your support assistant. 👋\n\n"
+            "I can help you create a support ticket. I'll need to collect a few details:\n"
+            "📦 Product name\n"
+            "⚠️ Issue description\n"
+            "🎯 Priority level\n\n"
+            "What product can I help you with today?",
         role: 'assistant',
       ));
     });
@@ -399,56 +445,309 @@ class ChatViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Demo implementation: simple keyword fill and state management
+  Future<void> createTicket() async {
+    if (_currentSessionId == null) return;
+    if (supportContext.product == null || supportContext.issue == null) return;
+
+    final ticketId = 'T-${DateTime.now().millisecondsSinceEpoch % 100000}';
+
+    final ticket = Ticket(
+      ticketId: ticketId,
+      sessionId: _currentSessionId!,
+      product: supportContext.product!,
+      issue: supportContext.issue!,
+      urgency: supportContext.urgency ?? 'medium',
+      createdAt: DateTime.now(),
+    );
+
+    // Store in tickets list
+    _tickets.insert(0, ticket); // Most recent first
+
+    // Store in session context
+    supportContext.ticketId = ticketId;
+    supportContext.state = 'complete';
+
+    await _saveTickets();
+    await _saveSessions();
+    notifyListeners();
+
+    // Add completion message to chat
+    _updateCurrentSessionMessages((messages) {
+      messages.add(Message(
+        text: '✅ Ticket #$ticketId created successfully!\n\n'
+            '📦 Product: ${ticket.product}\n'
+            '⚠️ Issue: ${ticket.issue}\n'
+            '${ticket.urgencyEmoji} Priority: ${ticket.urgency}\n\n'
+            'We\'ll follow up with you shortly. Is there anything else I can help you with?',
+        role: 'assistant',
+      ));
+    });
+
+    await _saveSessions();
+    notifyListeners();
+  }
+
+  Future<void> updateTicketStatus(String ticketId, String newStatus) async {
+    final ticketIndex = _tickets.indexWhere((t) => t.ticketId == ticketId);
+    if (ticketIndex != -1) {
+      _tickets[ticketIndex] = _tickets[ticketIndex].copyWith(
+        status: newStatus,
+        resolvedAt: newStatus == 'resolved' ? DateTime.now() : null,
+      );
+      await _saveTickets();
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteTicket(String ticketId) async {
+    _tickets.removeWhere((t) => t.ticketId == ticketId);
+    await _saveTickets();
+    notifyListeners();
+  }
+
+  // Smart prompting with field extraction
   void _updateSupportContext(String assistantReply, {required String userInput}) {
-    // Only change state if currently in-greeting
+    // Parse extracted data from LLM response
+    _parseExtractedData(assistantReply);
+
+    // Handle state transitions based on collected data
     switch (supportContext.state) {
       case 'greeting':
-        // Assume user is naming a product
-        supportContext.product = userInput.trim();
-        supportContext.state = 'collecting_issue';
+        if (supportContext.product != null && supportContext.product != 'none') {
+          supportContext.state = 'collecting_issue';
+          supportContext.waitingForConfirmation = false;
+        }
         break;
       case 'collecting_issue':
-        supportContext.issue = userInput.trim();
-        supportContext.state = 'collecting_urgency';
+        if (supportContext.issue != null && supportContext.issue != 'none') {
+          supportContext.state = 'collecting_urgency';
+          supportContext.waitingForConfirmation = false;
+        }
         break;
       case 'collecting_urgency':
-        // Try to extract urgency
-        var urg = _extractUrgency(userInput.trim());
-        supportContext.urgency = urg;
-        supportContext.state = 'confirming';
+        if (supportContext.urgency != null && supportContext.urgency != 'none') {
+          supportContext.state = 'confirming';
+          // Mark that we're now waiting for confirmation
+          supportContext.waitingForConfirmation = true;
+        }
         break;
       case 'confirming':
-        // If user says yes/confirm
-        if (userInput.toLowerCase().contains('yes')) {
-          supportContext.ticketId = 'T-${DateTime.now().millisecondsSinceEpoch % 100000}';
-          supportContext.state = 'complete';
-        } else {
-          // Reset for new input
-          supportContext.state = 'collecting_product';
+        // Only process confirmation if we're actively waiting for it
+        if (supportContext.waitingForConfirmation) {
+          final userLower = userInput.toLowerCase();
+          if (userLower.contains('yes') || 
+              userLower.contains('confirm') || 
+              userLower.contains('submit') ||
+              userLower.contains('ok') ||
+              userLower.contains('sure')) {
+            supportContext.waitingForConfirmation = false;
+            createTicket();
+          } else if (userLower.contains('no') || 
+                     userLower.contains('cancel') ||
+                     userLower.contains('wait')) {
+            // Reset for new input
+            supportContext.reset();
+            supportContext.state = 'greeting';
+          }
         }
         break;
       case 'complete':
-        // Stay or potentially restart if needed
+        // Check if user wants to create another ticket
+        final userLower = userInput.toLowerCase();
+        if (userLower.contains('new ticket') || 
+            userLower.contains('another issue') ||
+            userLower.contains('different problem')) {
+          supportContext.reset();
+          supportContext.state = 'greeting';
+        }
         break;
       default:
         break;
     }
   }
 
-  String _extractUrgency(String input) {
-    final l = input.toLowerCase();
-    if (l.contains('high')) return 'high';
-    if (l.contains('medium')) return 'medium';
-    if (l.contains('low')) return 'low';
-    return 'unknown';
+  void _parseExtractedData(String llmResponse) {
+    // Look for [DATA] markers in LLM response
+    final dataMatch = RegExp(
+      r'\[DATA\](.*?)\[/DATA\]',
+      dotAll: true,
+    ).firstMatch(llmResponse);
+
+    if (dataMatch != null) {
+      final data = dataMatch.group(1)!;
+
+      // Parse product
+      final productMatch = RegExp(r'product:\s*(.+?)(?:\n|$)', caseSensitive: false)
+          .firstMatch(data);
+      if (productMatch != null) {
+        final product = productMatch.group(1)!.trim();
+        if (product != 'none' && product != 'unknown' && product.isNotEmpty) {
+          supportContext.product = product;
+        }
+      }
+
+      // Parse issue
+      final issueMatch = RegExp(r'issue:\s*(.+?)(?:\n|$)', caseSensitive: false)
+          .firstMatch(data);
+      if (issueMatch != null) {
+        final issue = issueMatch.group(1)!.trim();
+        if (issue != 'none' && issue != 'unknown' && issue.isNotEmpty) {
+          supportContext.issue = issue;
+        }
+      }
+
+      // Parse urgency
+      final urgencyMatch = RegExp(r'urgency:\s*(.+?)(?:\n|$)', caseSensitive: false)
+          .firstMatch(data);
+      if (urgencyMatch != null) {
+        final urgency = urgencyMatch.group(1)!.trim().toLowerCase();
+        if (urgency == 'high' || urgency == 'medium' || urgency == 'low') {
+          supportContext.urgency = urgency;
+        }
+      }
+    }
   }
 
   String _buildPromptWithContext(String userInput) {
     final ctx = supportContext;
-    // Dynamic system prompt to steer the LLM
-    final system = '''\nYou are a support assistant.\nCurrent context:\nProduct: ${ctx.product ?? 'not yet provided'}\nIssue: ${ctx.issue ?? 'not yet provided'}\nUrgency: ${ctx.urgency ?? 'not yet provided'}\nTicket ID: ${ctx.ticketId ?? ''}\nState: ${ctx.state}\nIf product is missing, ask about product. If issue is missing, ask about issue. If urgency missing, ask for urgency. After all, summarize and ask to confirm. If confirmed, show ticket ID. Always be clear and concise.''';
-    return "$system\nUser: $userInput";
+
+    String prompt = '';
+
+    switch (ctx.state) {
+      case 'greeting':
+        prompt = '''You are a helpful support ticket assistant. Your job is to collect information about a support issue.
+
+Currently collecting: PRODUCT NAME
+
+User said: "$userInput"
+
+IMPORTANT: Extract information and format your response like this:
+
+[DATA]
+product: <extracted product name or "none" if not mentioned>
+issue: none
+urgency: none
+[/DATA]
+
+Then respond naturally, asking about the product if you couldn't extract it, or moving to ask about the issue if you did extract it.
+
+Remember: Be friendly, clear, and concise. Ask one question at a time.''';
+        break;
+
+      case 'collecting_issue':
+        prompt = '''You are a helpful support ticket assistant collecting issue details.
+
+Product: ${ctx.product}
+
+Currently collecting: ISSUE DESCRIPTION
+
+User said: "$userInput"
+
+IMPORTANT: Extract information and format your response like this:
+
+[DATA]
+product: ${ctx.product}
+issue: <extracted issue description or "none">
+urgency: none
+[/DATA]
+
+Then respond naturally, acknowledging the issue if you understood it, or asking for clarification if unclear.''';
+        break;
+
+      case 'collecting_urgency':
+        prompt = '''You are a helpful support ticket assistant collecting urgency level.
+
+Product: ${ctx.product}
+Issue: ${ctx.issue}
+
+Currently collecting: URGENCY LEVEL (low, medium, or high)
+
+User said: "$userInput"
+
+IMPORTANT: Extract information and format your response like this:
+
+[DATA]
+product: ${ctx.product}
+issue: ${ctx.issue}
+urgency: <low/medium/high or "none">
+[/DATA]
+
+Then respond naturally. If urgency was provided, move to confirmation. Otherwise, ask about urgency.
+
+Note: Interpret "urgent", "asap", "critical" as "high", "not urgent" as "low", and "moderate" as "medium".''';
+        break;
+
+      case 'confirming':
+        prompt = '''You are a helpful support ticket assistant ready to create a ticket.
+
+Ticket Details:
+- Product: ${ctx.product}
+- Issue: ${ctx.issue}
+- Urgency: ${ctx.urgency}
+
+User said: "$userInput"
+
+[DATA]
+product: ${ctx.product}
+issue: ${ctx.issue}
+urgency: ${ctx.urgency}
+[/DATA]
+
+IMPORTANT: Summarize the ticket details and ask for confirmation:
+"I'm ready to create a support ticket with these details:
+📦 Product: ${ctx.product}
+⚠️ Issue: ${ctx.issue}
+${_getUrgencyEmoji(ctx.urgency)} Priority: ${ctx.urgency}
+
+Should I create this ticket? (Reply yes to confirm)"''';
+        break;
+
+      case 'complete':
+        prompt = '''You are a helpful support ticket assistant. A ticket has been created.
+
+Ticket: ${ctx.ticketId}
+Product: ${ctx.product}
+Issue: ${ctx.issue}
+
+User said: "$userInput"
+
+[DATA]
+product: ${ctx.product}
+issue: ${ctx.issue}
+urgency: ${ctx.urgency}
+[/DATA]
+
+Respond helpfully to the user's message. They may have follow-up questions or want to create another ticket.''';
+        break;
+
+      default:
+        prompt = '''You are a helpful support ticket assistant.
+
+User: $userInput
+
+[DATA]
+product: none
+issue: none
+urgency: none
+[/DATA]
+
+Respond helpfully and guide them to create a support ticket.''';
+    }
+
+    return prompt;
+  }
+
+  String _getUrgencyEmoji(String? urgency) {
+    switch (urgency?.toLowerCase()) {
+      case 'high':
+        return '🔴';
+      case 'medium':
+        return '🟡';
+      case 'low':
+        return '🟢';
+      default:
+        return '⚪';
+    }
   }
 }
 
