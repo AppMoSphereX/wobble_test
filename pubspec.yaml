@@ -9,7 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^1.0.2
+  flutter_riverpod: ^2.4.0
+  http: ^1.1.0
 
 dev_dependencies:
   flutter_test:
