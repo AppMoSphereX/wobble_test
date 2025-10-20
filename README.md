@@ -99,6 +99,13 @@ POST http://localhost:11434/api/generate
 - Dart SDK (>=3.0.0)
 - Ollama CLI
 
+### 0. Install Flutter (If Not Already Installed)
+
+📚 **For detailed installation instructions, visit the official Flutter documentation:**  
+[Flutter - Get Started](https://docs.flutter.dev/get-started/install)
+
+---
+
 ### 1. Install Ollama
 
 **macOS/Linux:**
